@@ -58,12 +58,12 @@ fn run(input: &str) -> Result<(), LoxideError> {
     Ok(())
 }
 
-pub struct LoxideError<T> {
-    token: Token,
+pub struct LoxideError<'a> {
+    token: Token<'a>,
     msg: &'static str,
 }
 
-impl Display for LoxideError {
+impl<'a> Display for LoxideError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{RED}ERR{NORMAL}] {line}:{col}: {msg}", line = self.token.line, col = self.token.col, msg = self.msg)
     }
