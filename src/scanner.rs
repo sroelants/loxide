@@ -164,8 +164,19 @@ impl<'a> Scanner<'a> {
     }
 
     fn advance(&mut self) -> char {
-        let ch = self.source.as_bytes()[self.current].into();
+        let ch = self.char_at(self.current);
         self.current += 1;
         ch
+    }
+
+    fn matches(&mut self, expected: char) -> bool {
+        if self.completed() { return false; }
+        if self.char_at(self.current) != expected { return false; }
+        self.current += 1;
+        true
+    }
+
+    fn char_at(&self, idx: usize) -> char {
+        self.source.as_bytes()[idx].into()
     }
 }
