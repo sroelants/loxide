@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use scanner::{ScanError, Scanner, Token};
+use scanner::Scanner;
 use colors::{NORMAL, RED};
 
 mod scanner;
@@ -64,7 +64,7 @@ impl Loxide {
         }
     }
 
-    pub fn run(&mut self, input: &str) -> Result<(), LoxideError> {
+    pub fn run(&mut self, input: &str) -> Result<(), &str> {
         let mut scanner = Scanner::new(input);
         scanner.scan_tokens();
 
@@ -81,35 +81,26 @@ fn print_prompt() {
     std::io::stdout().flush().unwrap();
 }
 
+#[derive(Debug)]
 pub struct FileNotFoundError<'a> {
     path:  &'a str,
 }
 
-pub struct ReadFailedError;
-
-pub struct ParseError<'a> {
-    token: Token<'a>,
-}
-
-pub enum LoxideError<'a> {
-    FileNotFoundError(FileNotFoundError<'a>),
-    ReadFailedError(ReadFailedError),
-    ScanError(ScanError),
-    ParseError(ParseError<'a>),
-}
-
-impl<'a> Display for LoxideError<'a> {
+impl<'a> Display for FileNotFoundError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LoxideError::FileNotFoundError(err) =>
-                write!(f, "[{RED}ERR{NORMAL}] File not found: {path}", path = err.path),
-            LoxideError::ReadFailedError(_) =>
-                write!(f, "[{RED}ERR{NORMAL}] Failed to read input"),
-            LoxideError::ScanError(err) =>
-                write!(f, "{err}"),
-            LoxideError::ParseError(err) =>
-                write!(f, "[{RED}ERR{NORMAL}] {line}:{col} Unexpected token {tok}", line = err.token.line, col = err.token.col, tok = err.token.lexeme),
-            _ => Ok(())
-        }
+        write!(f, "[{RED}ERR{NORMAL}] File not found: {path}", path = self.path)
     }
 }
+
+impl<'a> std::error::Error for FileNotFoundError<'a> {}
+
+#[derive(Debug)]
+pub struct ReadFailedError;
+
+impl Display for ReadFailedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{RED}ERR{NORMAL}] Failed to read input")
+    }
+}
+
+impl std::error::Error for ReadFailedError {}

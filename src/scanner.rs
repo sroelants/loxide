@@ -2,21 +2,35 @@ use crate::colors::{NORMAL, RED};
 use std::fmt::Display;
 
 #[derive(Debug)]
-pub struct ScanError {
+pub struct UnexpectedCharError {
     line: usize,
     col: usize,
     ch: char,
 }
 
-impl Display for ScanError {
+impl Display for UnexpectedCharError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{RED}ERR{NORMAL}] {line}:{col} Unexpected character '{ch}'", line = self.line, col = self.col, ch = self.ch)
     }
 }
 
-impl std::error::Error for ScanError {}
+impl std::error::Error for UnexpectedCharError {}
 
-type ScanResult = Result<(), ScanError>;
+#[derive(Debug)]
+pub struct UnterminatedStringError {
+    line: usize,
+    col: usize,
+}
+
+impl Display for UnterminatedStringError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{RED}ERR{NORMAL}] {line}:{col} Unterminated string.", line = self.line, col = self.col)
+    }
+}
+
+impl std::error::Error for UnterminatedStringError {}
+
+type ScanResult = Result<(), UnexpectedCharError>;
 
 #[derive(Debug, Copy, Clone)]
 pub enum TokenType {
@@ -171,9 +185,19 @@ impl<'a> Scanner<'a> {
                 return Ok(());
             }
 
+            '"' => {
+                self.scan_string();
+                TokenType::String
+            },
+
+            _ if ch.is_ascii_digit() => {
+                self.scan_number();
+                Number
+            },
+
             // TODO: Keep matching until we get a maximal set of unrecognized characters,
-            // so we can report them all in one go
-            _ => return Err(ScanError { line: self.line, col: self.col, ch }),
+            // so we can report them all in one go.
+            _ => return Err(UnexpectedCharError { line: self.line, col: self.col, ch }),
         };
 
         let substr = &self.source.as_bytes()[self.start..self.current];
@@ -210,5 +234,44 @@ impl<'a> Scanner<'a> {
 
     fn peek(&self) -> char {
         if self.completed() { '\0' } else { self.char_at(self.current) }
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() { return '\0'; }
+        self.char_at(self.current + 1)
+    }
+
+    fn scan_string(&mut self) {
+        while self.peek() != '"' && !self.completed() {
+            if self.peek() == '\n' {
+                self.line += 1;
+                self.col = 1;
+            }
+
+            self.advance();
+        }
+
+        if self.completed() {
+            // TODO: Handle the error correctly?
+
+        }
+
+        // Skip the closing '"'
+        self.advance();
+    }
+
+    fn scan_number(&mut self) {
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
+            // Consume the '.'
+            self.advance();
+        }
+
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
     }
 }
