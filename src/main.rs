@@ -9,6 +9,7 @@ use colors::{NORMAL, RED};
 mod scanner;
 pub mod colors;
 pub mod ast;
+mod pretty_print;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
