@@ -8,6 +8,7 @@ use colors::{NORMAL, RED};
 
 mod scanner;
 pub mod colors;
+pub mod ast;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
