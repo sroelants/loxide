@@ -145,6 +145,31 @@ impl<'a> Scanner<'a> {
             '+' => Plus,
             ';' => Semicolon,
             '*' => Star,
+            '!' => if self.matches('=') { BangEqual } else { Bang },
+            '=' => if self.matches('=') { EqualEqual } else { Equal },
+            '<' => if self.matches('=') { LessEqual } else { Less },
+            '>' => if self.matches('=') { GreaterEqual } else { Greater },
+            '/' => if self.matches('/') {
+                while self.peek() != '\n' && !self.completed() {
+                    self.advance();
+                }
+                return Ok(());
+            } else {
+                Slash
+            },
+
+            // Update column, but otherwise ignore whitespace
+            ' ' | '\r' | '\t' => {
+                self.col += 1;
+                return Ok(());
+            },
+
+            // Update counters, but otherwise ignore newlines
+            '\n' => {
+                self.line += 1;
+                self.col = 1;
+                return Ok(());
+            }
 
             // TODO: Keep matching until we get a maximal set of unrecognized characters,
             // so we can report them all in one go
@@ -160,6 +185,8 @@ impl<'a> Scanner<'a> {
         let token = Token::new(token_type, substr, self.line, self.col);
         self.tokens.push(token);
 
+        self.col += substr.len();
+
         Ok(())
     }
 
@@ -173,10 +200,15 @@ impl<'a> Scanner<'a> {
         if self.completed() { return false; }
         if self.char_at(self.current) != expected { return false; }
         self.current += 1;
+
         true
     }
 
     fn char_at(&self, idx: usize) -> char {
         self.source.as_bytes()[idx].into()
+    }
+
+    fn peek(&self) -> char {
+        if self.completed() { '\0' } else { self.char_at(self.current) }
     }
 }
