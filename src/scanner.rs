@@ -1,5 +1,5 @@
 use crate::colors::{NORMAL, RED};
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
 pub struct UnexpectedCharError {
@@ -10,7 +10,13 @@ pub struct UnexpectedCharError {
 
 impl Display for UnexpectedCharError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{RED}ERR{NORMAL}] {line}:{col} Unexpected character '{ch}'", line = self.line, col = self.col, ch = self.ch)
+        write!(
+            f,
+            "[{RED}ERR{NORMAL}] {line}:{col} Unexpected character '{ch}'",
+            line = self.line,
+            col = self.col,
+            ch = self.ch
+        )
     }
 }
 
@@ -24,7 +30,12 @@ pub struct UnterminatedStringError {
 
 impl Display for UnterminatedStringError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{RED}ERR{NORMAL}] {line}:{col} Unterminated string.", line = self.line, col = self.col)
+        write!(
+            f,
+            "[{RED}ERR{NORMAL}] {line}:{col} Unterminated string.",
+            line = self.line,
+            col = self.col
+        )
     }
 }
 
@@ -186,14 +197,24 @@ impl<'a> Scanner<'a> {
             }
 
             '"' => {
-                self.scan_string();
+                self.consume_string();
                 TokenType::String
             },
 
-            _ if ch.is_ascii_digit() => {
-                self.scan_number();
+            _ if is_digit(ch) => {
+                self.consume_number();
                 Number
             },
+
+            _ if is_alphabetic(ch) => {
+                self.consume_identifier();
+
+                let ident = std::str::from_utf8(
+                    &self.source.as_bytes()[self.start..self.current]
+                ).unwrap();
+
+                reserved(ident).unwrap_or(Identifier)
+            }
 
             // TODO: Keep matching until we get a maximal set of unrecognized characters,
             // so we can report them all in one go.
@@ -241,7 +262,7 @@ impl<'a> Scanner<'a> {
         self.char_at(self.current + 1)
     }
 
-    fn scan_string(&mut self) {
+    fn consume_string(&mut self) {
         while self.peek() != '"' && !self.completed() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -253,6 +274,7 @@ impl<'a> Scanner<'a> {
 
         if self.completed() {
             // TODO: Handle the error correctly?
+            return;
 
         }
 
@@ -260,12 +282,12 @@ impl<'a> Scanner<'a> {
         self.advance();
     }
 
-    fn scan_number(&mut self) {
-        while self.peek().is_ascii_digit() {
+    fn consume_number(&mut self) {
+        while is_digit(self.peek()) {
             self.advance();
         }
 
-        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
+        if self.peek() == '.' && is_digit(self.peek_next()) {
             // Consume the '.'
             self.advance();
         }
@@ -273,5 +295,49 @@ impl<'a> Scanner<'a> {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
+    }
+
+    fn consume_identifier(&mut self) {
+        while is_alphanumeric(self.peek()) {
+            self.advance();
+        }
+    }
+}
+
+fn is_digit(ch: char) -> bool {
+    ch.is_ascii_digit()
+}
+
+fn is_alphabetic(ch: char) -> bool {
+    ch.is_ascii_alphabetic() || ch == '_'
+}
+
+fn is_alphanumeric(ch: char) -> bool {
+    is_alphabetic(ch) || is_digit(ch)
+}
+
+// TODO: Pull in something like lazy_static! and make this a static hashmap
+// (or phf and do it at compile-time)
+fn reserved(s: &str) -> Option<TokenType> {
+    use TokenType::*;
+
+    match s {
+        "and" => Some(And),
+        "class" => Some(Class),
+        "else" => Some(Else),
+        "false" => Some(False),
+        "for" => Some(For),
+        "fun" => Some(Fun),
+        "if" => Some(If),
+        "nil" => Some(Nil),
+        "or" => Some(Or),
+        "print" => Some(Print),
+        "return" => Some(Return),
+        "super" => Some(Super),
+        "this" => Some(This),
+        "true" => Some(True),
+        "var" => Some(Var),
+        "while" => Some(While),
+        _ => None,
     }
 }
