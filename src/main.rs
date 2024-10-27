@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, error::Error};
 use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
@@ -93,7 +93,7 @@ impl<'a> Display for FileNotFoundError<'a> {
     }
 }
 
-impl<'a> std::error::Error for FileNotFoundError<'a> {}
+impl<'a> Error for FileNotFoundError<'a> {}
 
 #[derive(Debug)]
 pub struct ReadFailedError;
@@ -104,4 +104,4 @@ impl Display for ReadFailedError {
     }
 }
 
-impl std::error::Error for ReadFailedError {}
+impl Error for ReadFailedError {}

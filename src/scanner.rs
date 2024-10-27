@@ -1,5 +1,6 @@
 use crate::colors::{NORMAL, RED};
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
+use std::error::Error;
 
 #[derive(Debug)]
 pub struct UnexpectedCharError {
@@ -20,7 +21,7 @@ impl Display for UnexpectedCharError {
     }
 }
 
-impl std::error::Error for UnexpectedCharError {}
+impl Error for UnexpectedCharError {}
 
 #[derive(Debug)]
 pub struct UnterminatedStringError {
@@ -39,7 +40,7 @@ impl Display for UnterminatedStringError {
     }
 }
 
-impl std::error::Error for UnterminatedStringError {}
+impl Error for UnterminatedStringError {}
 
 type ScanResult = Result<(), UnexpectedCharError>;
 
