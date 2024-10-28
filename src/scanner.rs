@@ -1,3 +1,14 @@
+// TODO: Make this a little rustier: lean on iterators more:
+//         1. Store a peekable iterator over the UTF8 characters
+//         2. Make the scanner an iterator that spits out tokens? Sounds cool in
+//            theory, but also means I need to accumulate the errors/diagnostics
+//            somewhere.
+//         3. Less implicit state, slightly nicer APIs than what the book uses
+//            (hidden things three levels deep pushing tokens to the scanner
+//            state)
+// TODO: Return a Result<Vec<Token>, Vec<Diagnostic>> that I can report at the
+//       top level.
+
 use crate::colors::{NORMAL, RED};
 use std::fmt::Display;
 use std::error::Error;

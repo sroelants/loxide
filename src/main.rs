@@ -3,13 +3,16 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use scanner::Scanner;
+use tokenizer::Scanner;
 use colors::{NORMAL, RED};
 
-mod scanner;
+pub mod scanner;
 pub mod colors;
 pub mod ast;
-mod pretty_print;
+pub mod pretty_print;
+pub mod tokenizer;
+pub mod tokens;
+pub mod span;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -68,10 +71,13 @@ impl Loxide {
 
     pub fn run(&mut self, input: &str) -> Result<(), &str> {
         let mut scanner = Scanner::new(input);
-        scanner.scan_tokens();
 
-        for token in scanner.tokens() {
+        for token in scanner.by_ref() {
             println!("{token:?}");
+        }
+
+        for error in scanner.errors() {
+            eprintln!("[{RED}ERR{NORMAL}] {}", error.msg);
         }
 
         Ok(())
