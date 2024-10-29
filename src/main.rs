@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use parser::Parser;
+use pretty_print::PrettyPrint;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
 use tokens::Token;
@@ -75,7 +76,10 @@ impl Loxide {
         let mut scanner = Scanner::new(input);
         let tokens: Vec<Token> = scanner.by_ref().collect();
 
-        let parser = Parser::new(tokens);
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse();
+
+        println!("{}", ast.pretty_print());
 
         for error in scanner.errors() {
             eprintln!("[{RED}ERR{NORMAL}] Lexer error: {}", error.msg);
