@@ -4,48 +4,42 @@
 //! the iterator.
 
 use std::iter::Peekable;
+use std::vec::IntoIter;
 use crate::span::Span;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
-use crate::tokenizer::Scanner;
 use crate::ast::Expr;
 use crate::ast::LoxLiteral;
 
 type ParseResult = Result<Expr, ParseError>;
 
-const EOF: Token = Token {
-    token_type: TokenType::Eof,
-    span: Span::new(),
-    lexeme: String::new(),
-};
-
-struct ParseError {
-    span: Span,
-    msg: String,
+pub struct ParseError {
+    pub span: Span,
+    pub msg: String,
 }
 
-pub struct Parser<'a> {
-    tokens: Peekable<Scanner<'a>>,
+pub struct Parser {
+    tokens: Peekable<IntoIter<Token>>,
     errors: Vec<ParseError>,
     span: Span,
 
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(scanner: Scanner<'a>) -> Self {
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
         Self {
-            tokens: scanner.peekable(),
+            tokens: tokens.into_iter().peekable(),
             errors: Vec::new(),
             span: Span::new(),
         }
     }
 
-    fn error(&mut self, msg: String) -> ParseError {
-        ParseError { span: self.span, msg }
+    pub fn errors(&self) -> &[ParseError] {
+        self.errors.as_slice()
     }
 
-    fn report(&mut self, msg: String) {
-        self.errors.push(ParseError { span: self.span, msg });
+    fn error(&mut self, msg: String) -> ParseError {
+        ParseError { span: self.span, msg }
     }
 
     /// Checks whether the next token matches the provided type, without
@@ -62,6 +56,7 @@ impl<'a> Parser<'a> {
         self.tokens.next()
     }
 
+    #[allow(dead_code)]
     /// Consume and discard tokens until we get back to an unambiguous beginning
     /// of a new expression/statement.
     fn synchronize(&mut self) {
@@ -85,7 +80,7 @@ impl<'a> Parser<'a> {
     /// consumes the matched token
     pub fn matches(&mut self, ttype: TokenType) -> Option<Token> {
         if self.check(ttype) {
-            return self.tokens.next()
+            return self.consume()
         } else {
             None
         }
@@ -96,7 +91,7 @@ impl<'a> Parser<'a> {
     pub fn match_any(&mut self, types: &[TokenType]) -> Option<Token> {
         for ttype in types {
             if self.check(*ttype) {
-                return self.tokens.next()
+                return self.consume();
             }
         }
 
@@ -112,7 +107,7 @@ impl<'a> Parser<'a> {
             return false;
         }
 
-        self.tokens.next();
+        self.consume();
         true
     }
 
