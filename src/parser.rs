@@ -190,7 +190,11 @@ impl Parser {
         }
 
         if let Some(token) = self.matches(TokenType::String) {
-            return Ok(Expr::Literal { value: LoxLiteral::Str(token.lexeme) });
+            let value = token.lexeme;
+            let len = value.len();
+            let trimmed = &value[1..len-1];
+
+            return Ok(Expr::Literal { value: LoxLiteral::Str(trimmed.to_owned()) });
         }
 
         if let Some(token) = self.matches(Number) {

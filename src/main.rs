@@ -3,8 +3,8 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
+use evaluate::EvalExpr;
 use parser::Parser;
-use pretty_print::PrettyPrint;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
 use tokens::Token;
@@ -16,6 +16,7 @@ pub mod ast;
 pub mod pretty_print;
 pub mod tokens;
 pub mod span;
+pub mod evaluate;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -32,12 +33,16 @@ fn main() {
 }
 
 struct Loxide {
-    found_error: bool,
+    static_error: bool,
+    runtime_error: bool,
 }
 
 impl Loxide {
     pub fn new() -> Self {
-        Self { found_error: false }
+        Self {
+            static_error: false,
+            runtime_error: false,
+        }
     }
 
     pub fn run_file(&mut self, file: &str) {
@@ -53,7 +58,8 @@ impl Loxide {
         print_prompt();
 
         for line in std::io::stdin().lines() {
-            self.found_error = false;
+            self.static_error = false;
+            self.runtime_error = false;
 
             let Ok(line) = line else {
                 eprintln!("[{RED}ERR{NORMAL}] Failed to read input");
@@ -68,30 +74,32 @@ impl Loxide {
         }
     }
 
-    pub fn run(&mut self, input: &str) -> Result<(), &str> {
+    pub fn run(&mut self, input: &str) {
         let mut scanner = Scanner::new(input);
         let tokens: Vec<Token> = scanner.by_ref().collect();
 
         let mut parser = Parser::new(tokens);
         let ast = parser.parse();
 
+        // Move this up, somewhere else?
         for error in scanner.errors() {
-            self.found_error = true;
+            self.static_error = true;
             eprintln!("[{RED}ERR{NORMAL}] Lexer error: {}", error.msg);
         }
 
         for error in parser.errors() {
-            self.found_error = true;
+            self.static_error = true;
             eprintln!("[{RED}ERR{NORMAL}] Parse error: {}", error.msg);
         }
 
-        if self.found_error {
-            return Err("Invalid input");
+        // Evaluate
+        match ast.eval() {
+            Ok(lit) => println!("{lit}"),
+            Err(error) => {
+                self.runtime_error = true;
+                eprintln!("[{RED}ERR{NORMAL}] Runtime error: {}", error.msg);
+            }
         }
-
-        println!("{}", ast.pretty_print());
-
-        Ok(())
     }
 }
 
