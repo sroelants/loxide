@@ -125,7 +125,7 @@ impl<'a> Scanner<'a> {
 
 // TODO: Maybe chain this somehow with a `std::iter::once(EOF)` after the fact.
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Token<'a>;
+    type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         use TokenType::*;
@@ -145,7 +145,7 @@ impl<'a> Iterator for Scanner<'a> {
                 return Some(Token {
                     token_type: Eof,
                     span: self.span,
-                    lexeme: "",
+                    lexeme: "".to_owned(),
                 });
             };
 
@@ -207,7 +207,7 @@ impl<'a> Iterator for Scanner<'a> {
             return Some(Token {
                 token_type,
                 span: self.span,
-                lexeme: &self.source[self.span.range()],
+                lexeme: self.source[self.span.range()].to_owned(),
             });
         }
     }
@@ -256,12 +256,12 @@ mod tests {
                 Token {
                     token_type: Dot,
                     span: Span { offset: 0, len: 1 },
-                    lexeme: "."
+                    lexeme: ".".to_owned()
                 },
                 Token {
                     token_type: Eof,
                     span: Span { offset: 1, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned()
                 },
             ]
         );
@@ -277,32 +277,32 @@ mod tests {
                 Token {
                     token_type: LeftParen,
                     span: Span { offset: 0, len: 1 },
-                    lexeme: "("
+                    lexeme: "(".to_owned()
                 },
                 Token {
                     token_type: LeftParen,
                     span: Span { offset: 1, len: 1 },
-                    lexeme: "("
+                    lexeme: "(".to_owned()
                 },
                 Token {
                     token_type: Dot,
                     span: Span { offset: 2, len: 1 },
-                    lexeme: "."
+                    lexeme: ".".to_owned()
                 },
                 Token {
                     token_type: RightParen,
                     span: Span { offset: 3, len: 1 },
-                    lexeme: ")"
+                    lexeme: ")".to_owned()
                 },
                 Token {
                     token_type: RightParen,
                     span: Span { offset: 4, len: 1 },
-                    lexeme: ")"
+                    lexeme: ")".to_owned()
                 },
                 Token {
                     token_type: Eof,
                     span: Span { offset: 5, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned()
                 },
             ]
         );
@@ -318,17 +318,17 @@ mod tests {
                 Token {
                     token_type: BangEqual,
                     span: Span { offset: 0, len: 2 },
-                    lexeme: "!="
+                    lexeme: "!=".to_owned()
                 },
                 Token {
                     token_type: Bang,
                     span: Span { offset: 2, len: 1 },
-                    lexeme: "!"
+                    lexeme: "!".to_owned()
                 },
                 Token {
                     token_type: Eof,
                     span: Span { offset: 3, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned()
                 },
             ]
         );
@@ -345,17 +345,17 @@ mod tests {
                 Token {
                     token_type: LeftParen,
                     span: Span { offset: 0, len: 1 },
-                    lexeme: "("
+                    lexeme: "(".to_owned()
                 },
                 Token {
                     token_type: RightParen,
                     span: Span { offset: 1, len: 1 },
-                    lexeme: ")"
+                    lexeme: ")".to_owned()
                 },
                 Token {
                     token_type: Eof,
                     span: Span { offset: 11, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned()
                 },
             ]
         );
@@ -370,12 +370,12 @@ mod tests {
                 Token {
                     token_type: TokenType::String,
                     span: Span { offset: 0, len: 14 },
-                    lexeme: r#""Hello there!""#
+                    lexeme: r#""Hello there!""#.to_owned()
                 },
                 Token {
                     token_type: TokenType::Eof,
                     span: Span { offset: 14, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned()
                 },
             ]
         );
@@ -401,37 +401,37 @@ mod tests {
                 Token {
                     token_type: TokenType::Number,
                     span: Span { offset: 0, len: 3 },
-                    lexeme: "123",
+                    lexeme: "123".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Comma,
                     span: Span { offset: 3, len: 1 },
-                    lexeme: ",",
+                    lexeme: ",".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Number,
                     span: Span { offset: 5, len: 5 },
-                    lexeme: "123.0",
+                    lexeme: "123.0".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Comma,
                     span: Span { offset: 10, len: 1 },
-                    lexeme: ",",
+                    lexeme: ",".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Number,
                     span: Span { offset: 12, len: 3 },
-                    lexeme: "123",
+                    lexeme: "123".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Dot,
                     span: Span { offset: 15, len: 1 },
-                    lexeme: ".",
+                    lexeme: ".".to_owned(),
                 },
                 Token {
                     token_type: TokenType::Eof,
                     span: Span { offset: 16, len: 0 },
-                    lexeme: ""
+                    lexeme: "".to_owned(),
                 },
             ]
         );

@@ -6,11 +6,11 @@ use std::path::PathBuf;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
 
-pub mod scanner;
+pub mod tokenizer;
+pub mod parser;
 pub mod colors;
 pub mod ast;
 pub mod pretty_print;
-pub mod tokenizer;
 pub mod tokens;
 pub mod span;
 

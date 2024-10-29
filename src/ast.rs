@@ -1,16 +1,19 @@
 use std::fmt::Display;
 
-use crate::scanner::Token;
+use crate::tokens::Token;
 
-pub enum LoxLiteral<'a> {
+#[derive(Debug, Clone)]
+pub enum LoxLiteral {
     Bool(bool),
     Num(f64),
-    Str(&'a str),
+    Str(String),
+    Nil,
 }
 
-impl<'a> Display for LoxLiteral<'a> {
+impl<'a> Display for LoxLiteral {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            LoxLiteral::Nil => write!(f, "nil"),
             LoxLiteral::Num(val) => write!(f, "{val}"),
             LoxLiteral::Bool(val) => write!(f, "{val}"),
             LoxLiteral::Str(val) => {
@@ -21,20 +24,21 @@ impl<'a> Display for LoxLiteral<'a> {
     }
 }
 
-pub enum Expr<'a> {
+#[derive(Debug, Clone)]
+pub enum Expr {
     Grouping {
-        expr: Box<Expr<'a>>,
+        expr: Box<Expr>,
     },
     Binary {
-        op: Token<'a>,
-        left: Box<Expr<'a>>,
-        right: Box<Expr<'a>>,
+        op: Token,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
     Unary {
-        op: Token<'a>,
-        right: Box<Expr<'a>>,
+        op: Token,
+        right: Box<Expr>,
     },
     Literal {
-        value: LoxLiteral<'a>,
+        value: LoxLiteral,
     },
 }

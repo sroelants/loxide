@@ -51,9 +51,10 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Token<'a> {
+// TODO: Make this zero-copy by not storing the lexeme on the token.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Token {
     pub token_type: TokenType,
     pub span: Span,
-    pub lexeme: &'a str,
+    pub lexeme: String,
 }

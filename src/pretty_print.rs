@@ -4,7 +4,7 @@ pub trait PrettyPrint {
     fn pretty_print(&self) -> String;
 }
 
-impl<'a> PrettyPrint for Expr<'a> {
+impl PrettyPrint for Expr {
     fn pretty_print(&self) -> String {
         match self {
             Expr::Grouping { expr } => format!("(group {expr})", expr = expr.pretty_print()),
@@ -30,23 +30,21 @@ impl<'a> PrettyPrint for Expr<'a> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{ast::LoxLiteral, scanner::{Token, TokenType}};
+    use crate::{ast::LoxLiteral, span::Span, tokens::{Token, TokenType}};
 
     #[test]
     fn pretty_print() {
         let ast = Expr::Binary {
             op: Token {
                 token_type: TokenType::Star,
-                lexeme: "*",
-                line: 1,
-                col: 1,
+                lexeme: "*".to_owned(),
+                span: Span::default()
             },
             left: Box::new(Expr::Unary {
                 op: Token {
                     token_type: TokenType::Minus,
-                    lexeme: "-",
-                    line: 1,
-                    col: 1,
+                    lexeme: "-".to_owned(),
+                span: Span::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: LoxLiteral::Num(123.0),

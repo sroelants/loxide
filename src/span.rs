@@ -8,11 +8,19 @@ pub struct Span {
 
 impl Default for Span {
     fn default() -> Self {
-        Self { offset: 0, len: 0 }
+        Self::new()
     }
 }
 
 impl Span {
+    pub const fn new() -> Self {
+        Self { offset: 0, len: 0 }
+    }
+
+    pub fn new_at(offset: usize) -> Self {
+        Self { offset, len: 0 }
+    }
+
     pub fn grow(&mut self, n: usize) {
         self.len += n;
     }
