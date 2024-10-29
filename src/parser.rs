@@ -206,7 +206,7 @@ impl Parser {
             if self.expect(RightParen) {
                return Ok(Expr::Grouping { expr: Box::new(expr) });
             } else {
-                return Err(self.error(format!("Expected {RightParen:?}")));
+                return Err(self.error(format!("Expected ')'")));
             }
         }
 

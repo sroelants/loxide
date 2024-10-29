@@ -46,17 +46,15 @@ impl Loxide {
             return;
         };
 
-        if let Err(err) = self.run(&input) {
-            eprintln!("{err}");
-            self.found_error = true;
-            std::process::exit(65);
-        };
+        let _ = self.run(&input);
     }
 
     pub fn run_prompt(&mut self) {
         print_prompt();
 
         for line in std::io::stdin().lines() {
+            self.found_error = false;
+
             let Ok(line) = line else {
                 eprintln!("[{RED}ERR{NORMAL}] Failed to read input");
                 print_prompt();
@@ -64,9 +62,7 @@ impl Loxide {
             };
 
 
-            if let Err(err) = self.run(&line) {
-                eprintln!("{err}");
-            };
+            let _ = self.run(&line);
 
             print_prompt();
         }
@@ -79,16 +75,21 @@ impl Loxide {
         let mut parser = Parser::new(tokens);
         let ast = parser.parse();
 
-        println!("{}", ast.pretty_print());
-
         for error in scanner.errors() {
+            self.found_error = true;
             eprintln!("[{RED}ERR{NORMAL}] Lexer error: {}", error.msg);
         }
 
-
         for error in parser.errors() {
+            self.found_error = true;
             eprintln!("[{RED}ERR{NORMAL}] Parse error: {}", error.msg);
         }
+
+        if self.found_error {
+            return Err("Invalid input");
+        }
+
+        println!("{}", ast.pretty_print());
 
         Ok(())
     }
