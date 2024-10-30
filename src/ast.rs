@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
@@ -73,14 +72,11 @@ impl<'a> Display for LoxLiteral {
             LoxLiteral::Num(val) => write!(f, "{val}"),
             LoxLiteral::Bool(val) => write!(f, "{val}"),
             LoxLiteral::Str(val) => write!(f, "{val}"),
-
-            // {
-            //     let trimmed = std::str::from_utf8(&val.as_bytes()[1..val.len() - 1]).unwrap();
-            //     write!(f, "{trimmed}")
-            // }
         }
     }
 }
+
+pub type Ast = Vec<Stmt>;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -99,4 +95,10 @@ pub enum Expr {
     Literal {
         value: LoxLiteral,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    Expression { expr: Expr },
+    Print { expr: Expr },
 }

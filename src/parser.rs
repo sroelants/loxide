@@ -5,6 +5,8 @@
 
 use std::iter::Peekable;
 use std::vec::IntoIter;
+use crate::ast::Ast;
+use crate::ast::Stmt;
 use crate::span::Span;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
@@ -33,6 +35,10 @@ impl Parser {
             errors: Vec::new(),
             span: Span::new(),
         }
+    }
+
+    pub fn finished(&mut self) -> bool {
+        self.tokens.peek().is_some_and(|t| t.token_type == TokenType::Eof)
     }
 
     pub fn errors(&self) -> &[ParseError] {
@@ -110,6 +116,36 @@ impl Parser {
 
         self.consume();
         true
+    }
+
+    pub fn statement(&mut self) -> Result<Stmt, ParseError> {
+        use TokenType::*;
+
+        if let Some(_) = self.matches(Print) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+        let expr = self.expression()?;
+
+        if !self.expect(TokenType::Semicolon) {
+            return Err(self.error(format!("expected ';'")));
+        };
+
+        Ok(Stmt::Print { expr })
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
+        let expr = self.expression()?;
+
+        if !self.expect(TokenType::Semicolon) {
+            return Err(self.error(format!("expected ';'")));
+        };
+
+        Ok(Stmt::Expression { expr })
     }
 
     pub fn expression(&mut self) -> ParseResult {
@@ -218,13 +254,20 @@ impl Parser {
         Err(self.error(format!("expected expression")))
     }
 
-    pub fn parse(&mut self) -> Result<Expr, Vec<ParseError>> {
-        match self.expression() {
-            Ok(expr) => return Ok(expr),
-            Err(err) => {
-                self.errors.push(err);
-                return Err(std::mem::take(&mut self.errors))
+    pub fn parse(&mut self) -> Result<Ast, Vec<ParseError>> {
+        let mut statements = Vec::new();
+
+        while !self.finished() {
+            match self.statement() {
+                Ok(statement) => statements.push(statement),
+                Err(err) => self.errors.push(err),
             }
+        }
+
+        if self.errors.len() == 0 {
+            Ok(statements)
+        } else {
+            Err(std::mem::take(&mut self.errors))
         }
     }
 }

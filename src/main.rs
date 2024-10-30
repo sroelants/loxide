@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use evaluate::EvalExpr;
+use evaluate::Interpret;
 use parser::Parser;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
@@ -108,7 +108,7 @@ impl Loxide {
         };
 
         // Evaluate
-        match ast.eval() {
+        match ast.interpret() {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;

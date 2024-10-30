@@ -1,6 +1,8 @@
 #![allow(dead_code)]
+use crate::ast::Ast;
 use crate::ast::LoxLiteral as Lit;
 use crate::ast::Expr;
+use crate::ast::Stmt;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 
@@ -11,15 +13,15 @@ pub struct RuntimeError {
 
 type Result<T> = std::result::Result<T, RuntimeError>;
 
-pub trait EvalExpr {
-    fn eval(self) -> Result<Lit>;
+pub trait Interpret {
+    fn interpret(self) -> Result<Lit>;
 }
 
-impl EvalExpr for Expr {
-    fn eval(self) -> Result<Lit> {
+impl Interpret for Expr {
+    fn interpret(self) -> Result<Lit> {
         match self {
             Expr::Literal { value } => Ok(value),
-            Expr::Grouping { expr } => Ok(expr.eval()?),
+            Expr::Grouping { expr } => Ok(expr.interpret()?),
             Expr::Unary { op, right } => Ok(eval_unary(op, *right)?),
             Expr::Binary { op, left, right } => Ok(eval_binary(op, *left, *right)?),
         }
@@ -27,7 +29,7 @@ impl EvalExpr for Expr {
 }
 
 fn eval_unary(op: Token, right: Expr) -> Result<Lit> {
-    let right = right.eval()?;
+    let right = right.interpret()?;
 
     match op.token_type {
         TokenType::Bang => Ok(Lit::Bool(!is_truthy(right))),
@@ -42,8 +44,8 @@ fn eval_unary(op: Token, right: Expr) -> Result<Lit> {
 }
 
 fn eval_binary(op: Token, left: Expr, right: Expr) -> Result<Lit> {
-    let left = left.eval()?;
-    let right = right.eval()?;
+    let left = left.interpret()?;
+    let right = right.interpret()?;
 
     match op.token_type {
         TokenType::Minus => {
@@ -146,5 +148,32 @@ fn assert_bool(op: &Token, lit: Lit) -> Result<bool> {
        Ok(boolean)
     } else {
        Err(RuntimeError { token: op.clone(), msg: format!("operand must be boolean") })
+    }
+}
+
+impl Interpret for Stmt {
+    fn interpret(self) -> Result<Lit> {
+        match self {
+            Stmt::Print { expr } => {
+                let val = expr.interpret()?;
+                println!("{val}");
+            }
+
+            Stmt::Expression { expr } => {
+               expr.interpret()?;
+            }
+        };
+
+        Ok(Lit::Nil)
+    }
+}
+
+impl Interpret for Ast {
+    fn interpret(self) -> Result<Lit> {
+        for statement in self {
+            statement.interpret()?;
+        }
+
+        Ok(Lit::Nil)
     }
 }
