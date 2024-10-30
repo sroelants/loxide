@@ -13,6 +13,7 @@ use crate::ast::LoxLiteral;
 
 type ParseResult = Result<Expr, ParseError>;
 
+#[derive(Debug, Clone)]
 pub struct ParseError {
     pub span: Span,
     pub msg: String,
@@ -217,12 +218,12 @@ impl Parser {
         Err(self.error(format!("expected expression")))
     }
 
-    pub fn parse(&mut self) -> Expr {
+    pub fn parse(&mut self) -> Result<Expr, Vec<ParseError>> {
         match self.expression() {
-            Ok(expr) => return expr,
+            Ok(expr) => return Ok(expr),
             Err(err) => {
                 self.errors.push(err);
-                Expr::Literal { value: LoxLiteral::Nil }
+                return Err(std::mem::take(&mut self.errors))
             }
         }
     }

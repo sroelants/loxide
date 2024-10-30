@@ -51,7 +51,15 @@ impl Loxide {
             return;
         };
 
-        let _ = self.run(&input);
+        self.run(&input);
+
+        if self.static_error {
+            std::process::exit(65);
+        }
+
+        if self.runtime_error {
+            std::process::exit(70);
+        }
     }
 
     pub fn run_prompt(&mut self) {
@@ -68,7 +76,7 @@ impl Loxide {
             };
 
 
-            let _ = self.run(&line);
+            self.run(&line);
 
             print_prompt();
         }
@@ -79,7 +87,7 @@ impl Loxide {
         let tokens: Vec<Token> = scanner.by_ref().collect();
 
         let mut parser = Parser::new(tokens);
-        let ast = parser.parse();
+        let parsed = parser.parse();
 
         // Move this up, somewhere else?
         for error in scanner.errors() {
@@ -87,10 +95,17 @@ impl Loxide {
             eprintln!("[{RED}ERR{NORMAL}] Lexer error: {}", error.msg);
         }
 
-        for error in parser.errors() {
-            self.static_error = true;
-            eprintln!("[{RED}ERR{NORMAL}] Parse error: {}", error.msg);
-        }
+        let ast = match parsed {
+            Ok(ast) => ast,
+            Err(errors) => {
+                for error in errors {
+                    self.static_error = true;
+                    eprintln!("[{RED}ERR{NORMAL}] Parse error: {}", error.msg);
+                }
+
+                return;
+            }
+        };
 
         // Evaluate
         match ast.eval() {
