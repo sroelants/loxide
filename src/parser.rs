@@ -38,7 +38,11 @@ impl Parser {
     }
 
     pub fn finished(&mut self) -> bool {
-        self.tokens.peek().is_some_and(|t| t.token_type == TokenType::Eof)
+        if let Some(next) = self.tokens.peek() {
+            next.token_type == TokenType::Eof
+        } else {
+           true
+        }
     }
 
     pub fn errors(&self) -> &[ParseError] {
@@ -259,8 +263,13 @@ impl Parser {
 
         while !self.finished() {
             match self.statement() {
-                Ok(statement) => statements.push(statement),
-                Err(err) => self.errors.push(err),
+                Ok(statement) => {
+                    statements.push(statement)
+                },
+                Err(err) => {
+                    self.errors.push(err);
+                    self.synchronize();
+                }
             }
         }
 

@@ -85,7 +85,6 @@ impl Loxide {
     pub fn run(&mut self, input: &str) {
         let mut scanner = Scanner::new(input);
         let tokens: Vec<Token> = scanner.by_ref().collect();
-
         let mut parser = Parser::new(tokens);
         let parsed = parser.parse();
 
