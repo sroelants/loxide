@@ -147,6 +147,8 @@ impl Parser {
             self.if_statement()
         } else if let Some(_) = self.matches(While) {
             self.while_statement()
+        } else if let Some(_) = self.matches(For) {
+            self.for_statement()
         } else if let Some(_) = self.matches(Print) {
             self.print_statement()
         } else if let Some(_) = self.matches(LeftBrace) {
@@ -182,6 +184,56 @@ impl Parser {
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While { condition, body })
+    }
+
+    pub fn for_statement(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
+
+        self.expect(LeftParen, format!("expected '(' after 'for'"))?;
+
+        let initializer = if let Some(_) = self.matches(Semicolon) {
+            None
+        } else if let Some(_) = self.matches(Var) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if !self.check(Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.expect(Semicolon, format!("expected ';' after loop condition"))?;
+
+        let increment = if !self.check(RightParen) {
+            Some(self.expression()?)
+        } else {
+           None
+        };
+
+        self.expect(RightParen, format!("expected ')' after for-clause"))?;
+
+        let mut body = self.statement()?;
+
+        // Rewrite into a while-loop based AST
+        if let Some(increment) = increment {
+            body = Stmt::Block { statements: vec![
+                body,
+                Stmt::Expression { expr: increment },
+            ]};
+        }
+
+        let condition = condition
+            .unwrap_or(Expr::Literal { value: LoxLiteral::Bool(true) });
+        body = Stmt::While { condition, body: Box::new(body) };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block { statements: vec![initializer, body] }
+        }
+
+        Ok(body)
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
