@@ -162,6 +162,7 @@ impl Parser {
         self.expect(RightParen, format!("expected ')' after if condition"));
 
         let then_branch = Box::new(self.statement()?);
+
         let else_branch = if let Some(_) = self.matches(Else) {
             Some(Box::new(self.statement()?))
         } else {
@@ -186,7 +187,7 @@ impl Parser {
             statements.push(self.declaration()?)
         }
 
-        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;)
+        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;
         Ok(statements)
     }
 
