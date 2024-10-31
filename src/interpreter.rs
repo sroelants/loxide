@@ -21,14 +21,14 @@ impl Interpreter {
     }
 
     pub fn interpret(&mut self, ast: Ast) -> Result<Lit> {
-        for statement in ast {
+        for statement in ast.iter() {
             self.interpret_stmt(statement)?;
         }
 
         Ok(Lit::Nil)
     }
 
-    fn interpret_stmt(&mut self, statement: Stmt) -> Result<Lit> {
+    fn interpret_stmt(&mut self, statement: &Stmt) -> Result<Lit> {
         match statement {
             Stmt::Print { expr } => {
                 let val = self.interpret_expr(expr)?;
@@ -37,9 +37,15 @@ impl Interpreter {
 
             Stmt::If { condition, then_branch, else_branch } => {
                 if is_truthy(&self.interpret_expr(condition)?) {
-                    self.interpret_stmt(*then_branch)?;
+                    self.interpret_stmt(then_branch)?;
                 } else if let Some(else_branch) = else_branch {
-                    self.interpret_stmt(*else_branch)?;
+                    self.interpret_stmt(else_branch)?;
+                }
+            }
+
+            Stmt::While { condition, body } => {
+                while is_truthy(&self.interpret_expr(condition)?) {
+                    self.interpret_stmt(body)?;
                 }
             }
 
@@ -65,10 +71,10 @@ impl Interpreter {
         Ok(Lit::Nil)
     }
 
-    fn interpret_block(&mut self, statements: Vec<Stmt>) -> Result<Lit> {
+    fn interpret_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
         self.env.push_scope();
 
-        for statement in statements {
+        for statement in statements.iter() {
             if let Err(err) = self.interpret_stmt(statement) {
                 self.env.pop_scope();
                 return Err(err);
@@ -79,29 +85,29 @@ impl Interpreter {
         Ok(Lit::Nil)
     }
 
-    fn interpret_expr(&mut self, expr: Expr) -> Result<Lit> {
+    fn interpret_expr(&mut self, expr: &Expr) -> Result<Lit> {
         match expr {
-            Expr::Literal { value } => Ok(value),
+            Expr::Literal { value } => Ok(value.clone()),
 
-            Expr::Grouping { expr } => self.interpret_expr(*expr),
+            Expr::Grouping { expr } => self.interpret_expr(expr),
 
-            Expr::Unary { op, right } => self.interpret_unary(op, *right),
+            Expr::Unary { op, right } => self.interpret_unary(op, right),
 
-            Expr::Binary { op, left, right } => self.interpret_binary(op, *left, *right),
+            Expr::Binary { op, left, right } => self.interpret_binary(op, left, right),
 
-            Expr::Logical { op, left, right } => self.interpret_logical(op, *left, *right),
+            Expr::Logical { op, left, right } => self.interpret_logical(op, left, right),
 
             Expr::Variable { name } => self.env.get(name),
 
             Expr::Assignment { name, value } => {
-                let value = self.interpret_expr(*value)?;
+                let value = self.interpret_expr(value)?;
                 self.env.assign(name, value.clone())?;
                 Ok(value)
             }
         }
     }
 
-    fn interpret_unary(&mut self, op: Token, right: Expr) -> Result<Lit> {
+    fn interpret_unary(&mut self, op: &Token, right: &Expr) -> Result<Lit> {
         let right = self.interpret_expr(right)?;
 
         match op.token_type {
@@ -116,7 +122,7 @@ impl Interpreter {
         }
     }
 
-    fn interpret_logical(&mut self, op: Token, left: Expr, right: Expr) -> Result<Lit> {
+    fn interpret_logical(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
         let left = self.interpret_expr(left)?;
 
         if op.token_type == TokenType::Or {
@@ -132,7 +138,7 @@ impl Interpreter {
         self.interpret_expr(right)
     }
 
-    fn interpret_binary(&mut self, op: Token, left: Expr, right: Expr) -> Result<Lit> {
+    fn interpret_binary(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
         let left = self.interpret_expr(left)?;
         let right = self.interpret_expr(right)?;
 
