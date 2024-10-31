@@ -206,7 +206,7 @@ impl Parser {
 
     pub fn assignment(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if let Some(_) = self.matches(Equal) {
             let value = self.assignment()?;
@@ -221,6 +221,30 @@ impl Parser {
         return Ok(expr);
     }
 
+    pub fn or(&mut self) -> ParseResult<Expr> {
+        use TokenType::*;
+        let mut expr = self.and()?;
+
+        while let Some(op) = self.matches(Or) {
+            let right = self.and()?;
+            expr = Expr::Logical { op, left: Box::new(expr), right: Box::new(right) };
+        }
+
+        Ok(expr)
+    }
+
+    pub fn and(&mut self) -> ParseResult<Expr> {
+        use TokenType::*;
+        let mut expr = self.equality()?;
+
+        while let Some(op) = self.matches(And) {
+            let right = self.equality()?;
+            expr = Expr::Logical { op, left: Box::new(expr), right: Box::new(right) };
+        }
+
+        Ok(expr)
+    }
+
     pub fn equality(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
         let mut expr = self.comparison()?;
@@ -232,6 +256,8 @@ impl Parser {
 
         Ok(expr)
     }
+
+
 
     pub fn comparison(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
