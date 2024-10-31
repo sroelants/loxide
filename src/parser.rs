@@ -145,6 +145,8 @@ impl Parser {
 
         if let Some(_) = self.matches(If) {
             self.if_statement()
+        } else if let Some(_) = self.matches(While) {
+            self.while_statement()
         } else if let Some(_) = self.matches(Print) {
             self.print_statement()
         } else if let Some(_) = self.matches(LeftBrace) {
@@ -170,6 +172,16 @@ impl Parser {
         };
 
         Ok(Stmt::If { condition, then_branch, else_branch })
+    }
+
+    pub fn while_statement(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
+        self.expect(LeftParen, format!("expected '(' after 'while'"));
+        let condition = self.expression()?;
+        self.expect(RightParen, format!("expected ')' after while condition"));
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While { condition, body })
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
