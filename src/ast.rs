@@ -123,6 +123,10 @@ pub enum Stmt {
         else_branch: Option<Box<Stmt>>,
 
     },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
+    },
     Print {
         expr: Expr,
     },
