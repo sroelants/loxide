@@ -22,13 +22,13 @@ impl Interpreter {
 
     pub fn interpret(&mut self, ast: Ast) -> Result<Lit> {
         for statement in ast.iter() {
-            self.interpret_stmt(statement)?;
+            self.execute(statement)?;
         }
 
         Ok(Lit::Nil)
     }
 
-    fn interpret_stmt(&mut self, statement: &Stmt) -> Result<Lit> {
+    fn execute(&mut self, statement: &Stmt) -> Result<Lit> {
         match statement {
             Stmt::Print { expr } => {
                 let val = self.interpret_expr(expr)?;
@@ -37,15 +37,15 @@ impl Interpreter {
 
             Stmt::If { condition, then_branch, else_branch } => {
                 if is_truthy(&self.interpret_expr(condition)?) {
-                    self.interpret_stmt(then_branch)?;
+                    self.execute(then_branch)?;
                 } else if let Some(else_branch) = else_branch {
-                    self.interpret_stmt(else_branch)?;
+                    self.execute(else_branch)?;
                 }
             }
 
             Stmt::While { condition, body } => {
                 while is_truthy(&self.interpret_expr(condition)?) {
-                    self.interpret_stmt(body)?;
+                    self.execute(body)?;
                 }
             }
 
@@ -75,7 +75,7 @@ impl Interpreter {
         self.env.push_scope();
 
         for statement in statements.iter() {
-            if let Err(err) = self.interpret_stmt(statement) {
+            if let Err(err) = self.execute(statement) {
                 self.env.pop_scope();
                 return Err(err);
             }
