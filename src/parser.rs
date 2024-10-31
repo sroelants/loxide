@@ -176,9 +176,9 @@ impl Parser {
 
     pub fn while_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        self.expect(LeftParen, format!("expected '(' after 'while'"));
+        self.expect(LeftParen, format!("expected '(' after 'while'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, format!("expected ')' after while condition"));
+        self.expect(RightParen, format!("expected ')' after while condition"))?;
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While { condition, body })
