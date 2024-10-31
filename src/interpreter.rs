@@ -35,6 +35,14 @@ impl Interpreter {
                 println!("{val}");
             }
 
+            Stmt::If { condition, then_branch, else_branch } => {
+                if is_truthy(self.interpret_expr(condition)?) {
+                    self.interpret_stmt(then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.interpret_stmt(else_branch)?;
+                }
+            }
+
             Stmt::Expression { expr } => {
                self.interpret_expr(expr)?;
             }
