@@ -49,10 +49,28 @@ impl Interpreter {
                     Lit::Nil
                 };
 
-                self.env.define(name.lexeme, value);
+                self.env.define(name, value);
+            }
+
+            Stmt::Block { statements } => {
+                self.interpret_block(statements)?;
             }
         };
 
+        Ok(Lit::Nil)
+    }
+
+    fn interpret_block(&mut self, statements: Vec<Stmt>) -> Result<Lit> {
+        self.env.push_scope();
+
+        for statement in statements {
+            if let Err(err) = self.interpret_stmt(statement) {
+                self.env.pop_scope();
+                return Err(err);
+            }
+        }
+
+        self.env.pop_scope();
         Ok(Lit::Nil)
     }
 
@@ -66,13 +84,12 @@ impl Interpreter {
 
             Expr::Binary { op, left, right } => self.interpret_binary(op, *left, *right),
 
-            Expr::Variable { name } => {
-                if let Some(value) = self.env.get(&name.lexeme) {
-                    Ok(value.to_owned())
-                } else {
-                    let msg = format!("Undefined variable {}", name.lexeme);
-                    Err(RuntimeError { token: name, msg })
-                }
+            Expr::Variable { name } => self.env.get(name),
+
+            Expr::Assignment { name, value } => {
+                let value = self.interpret_expr(*value)?;
+                self.env.assign(name, value.clone())?;
+                Ok(value)
             }
         }
     }

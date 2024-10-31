@@ -1,3 +1,14 @@
 var a = 1;
 var b = 2;
-print a + b;
+var c = 999;
+
+{
+  var c = 3;
+  print a + b + c;
+  print "Hello from inside the scope!";
+  print "value of c inside the scope is";
+  print c;
+}
+
+print "Value of c outside the scope is";
+print c;

@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use crate::tokens::Token;
+use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub enum LoxLiteral {
@@ -39,28 +39,28 @@ impl LoxLiteral {
     pub fn is_bool(&self) -> bool {
         match self {
             Self::Bool(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_num(&self) -> bool {
         match self {
             Self::Num(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_str(&self) -> bool {
         match self {
             Self::Str(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Nil => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -98,11 +98,25 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Assignment {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Expression { expr: Expr },
-    Print { expr: Expr },
-    Var { name: Token, initializer: Option<Expr> }
+    Block {
+        statements: Vec<Stmt>,
+    },
+    Expression {
+        expr: Expr,
+    },
+    Print {
+        expr: Expr,
+    },
+    Var {
+        name: Token,
+        initializer: Option<Expr>,
+    },
 }

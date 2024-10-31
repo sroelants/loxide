@@ -25,6 +25,11 @@ impl PrettyPrint for Expr {
             Expr::Literal { value } => format!("{value}"),
 
             Expr::Variable { name  } => format!("{name}"),
+
+            Expr::Assignment { name, value  } => format!(
+                "(assign {name} {value})",
+                value = value.pretty_print()
+            ),
         }
     }
 }

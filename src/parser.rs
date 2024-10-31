@@ -149,6 +149,8 @@ impl Parser {
 
         if let Some(_) = self.matches(Print) {
             self.print_statement()
+        } else if let Some(_) = self.matches(LeftBrace) {
+            Ok(Stmt::Block { statements: self.block()? })
         } else {
             self.expression_statement()
         }
@@ -162,6 +164,18 @@ impl Parser {
         Ok(Stmt::Print { expr })
     }
 
+    fn block(&mut self) -> ParseResult<Vec<Stmt>> {
+        let mut statements = Vec::new();
+
+        while !self.check(TokenType::RightBrace) && !self.finished() {
+            statements.push(self.declaration()?)
+        }
+
+        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;
+        Ok(statements)
+    }
+
+
     fn expression_statement(&mut self) -> ParseResult<Stmt> {
         let expr = self.expression()?;
 
@@ -171,7 +185,24 @@ impl Parser {
     }
 
     pub fn expression(&mut self) -> ParseResult<Expr> {
-        self.equality()
+        self.assignment()
+    }
+
+    pub fn assignment(&mut self) -> ParseResult<Expr> {
+        use TokenType::*;
+        let expr = self.equality()?;
+
+        if let Some(_) = self.matches(Equal) {
+            let value = self.assignment()?;
+
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assignment { name, value: Box::new(value) });
+            }
+
+            return Err(self.error(format!("Invalid assignment target")));
+        }
+
+        return Ok(expr);
     }
 
     pub fn equality(&mut self) -> ParseResult<Expr> {
