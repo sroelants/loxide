@@ -36,7 +36,7 @@ impl Interpreter {
             }
 
             Stmt::If { condition, then_branch, else_branch } => {
-                if is_truthy(self.interpret_expr(condition)?) {
+                if is_truthy(&self.interpret_expr(condition)?) {
                     self.interpret_stmt(*then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.interpret_stmt(*else_branch)?;
@@ -89,6 +89,8 @@ impl Interpreter {
 
             Expr::Binary { op, left, right } => self.interpret_binary(op, *left, *right),
 
+            Expr::Logical { op, left, right } => self.interpret_logical(op, *left, *right),
+
             Expr::Variable { name } => self.env.get(name),
 
             Expr::Assignment { name, value } => {
@@ -103,7 +105,7 @@ impl Interpreter {
         let right = self.interpret_expr(right)?;
 
         match op.token_type {
-            TokenType::Bang => Ok(Lit::Bool(!is_truthy(right))),
+            TokenType::Bang => Ok(Lit::Bool(!is_truthy(&right))),
 
             TokenType::Minus => {
                 let num = assert_num(&op, right)?;
@@ -112,6 +114,22 @@ impl Interpreter {
 
             _ => unreachable!(),
         }
+    }
+
+    fn interpret_logical(&mut self, op: Token, left: Expr, right: Expr) -> Result<Lit> {
+        let left = self.interpret_expr(left)?;
+
+        if op.token_type == TokenType::Or {
+            if is_truthy(&left) {
+                return Ok(left);
+            }
+        } else {
+            if !is_truthy(&left) {
+                return Ok(left);
+            }
+        }
+
+        self.interpret_expr(right)
     }
 
     fn interpret_binary(&mut self, op: Token, left: Expr, right: Expr) -> Result<Lit> {
@@ -192,10 +210,10 @@ impl Interpreter {
     }
 }
 
-fn is_truthy(value: Lit) -> bool {
+fn is_truthy(value: &Lit) -> bool {
     match value {
         Lit::Nil => false,
-        Lit::Bool(b) => b,
+        Lit::Bool(b) => *b,
         _ => true
     }
 }

@@ -16,6 +16,13 @@ impl PrettyPrint for Expr {
                 right = right.pretty_print()
             ),
 
+            Expr::Logical { op, left, right } => format!(
+                "({op} {left} {right})",
+                op = op.lexeme,
+                left = left.pretty_print(),
+                right = right.pretty_print()
+            ),
+
             Expr::Unary { op, right } => format!(
                 "({op} {right})",
                 op = op.lexeme,

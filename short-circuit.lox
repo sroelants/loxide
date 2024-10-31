@@ -1,0 +1,5 @@
+var x = 5;
+var y = nil;
+
+print x and "hello";
+print y or "there";
