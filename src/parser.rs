@@ -143,13 +143,32 @@ impl Parser {
     pub fn statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        if let Some(_) = self.matches(Print) {
+        if let Some(_) = self.matches(If) {
+            self.if_statement()
+        } else if let Some(_) = self.matches(Print) {
             self.print_statement()
         } else if let Some(_) = self.matches(LeftBrace) {
             Ok(Stmt::Block { statements: self.block()? })
         } else {
             self.expression_statement()
         }
+    }
+
+    pub fn if_statement(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
+
+        self.expect(LeftParen, format!("expected '(' after 'if'"));
+        let condition = self.expression()?;
+        self.expect(RightParen, format!("expected ')' after if condition"));
+
+        let then_branch = Box::new(self.statement()?);
+        let else_branch = if let Some(_) = self.matches(Else) {
+            Some(Box::new(self.statement()?))
+        } else {
+           None
+        };
+
+        Ok(Stmt::If { condition, then_branch, else_branch })
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
@@ -167,7 +186,7 @@ impl Parser {
             statements.push(self.declaration()?)
         }
 
-        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;
+        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;)
         Ok(statements)
     }
 
