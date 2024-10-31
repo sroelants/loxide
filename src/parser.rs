@@ -157,9 +157,9 @@ impl Parser {
     pub fn if_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        self.expect(LeftParen, format!("expected '(' after 'if'"));
+        self.expect(LeftParen, format!("expected '(' after 'if'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, format!("expected ')' after if condition"));
+        self.expect(RightParen, format!("expected ')' after if condition"))?;
 
         let then_branch = Box::new(self.statement()?);
 
