@@ -23,6 +23,8 @@ impl PrettyPrint for Expr {
             ),
 
             Expr::Literal { value } => format!("{value}"),
+
+            Expr::Variable { name  } => format!("{name}"),
         }
     }
 }

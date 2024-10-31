@@ -13,7 +13,7 @@ use crate::tokens::TokenType;
 use crate::ast::Expr;
 use crate::ast::LoxLiteral;
 
-type ParseResult = Result<Expr, ParseError>;
+type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -109,20 +109,42 @@ impl Parser {
         None
     }
 
-    pub fn expect(&mut self, expected: TokenType) -> bool {
+    pub fn expect(&mut self, expected: TokenType, msg: String) -> ParseResult<Token> {
         let Some(next) = self.tokens.peek() else {
-            return false;
+            return Err(ParseError { span: self.span, msg })
         };
 
         if next.token_type != expected {
-            return false;
+            return Err(ParseError { span: self.span, msg })
         }
 
-        self.consume();
-        true
+        Ok(self.consume().unwrap())
     }
 
-    pub fn statement(&mut self) -> Result<Stmt, ParseError> {
+    pub fn declaration(&mut self) -> ParseResult<Stmt> {
+        if let Some(_) = self.matches(TokenType::Var) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    pub fn var_declaration(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
+        let name = self.expect(Identifier, format!("expected variable name"))?;
+
+        let initializer = if let Some(_) = self.matches(Equal) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.expect(Semicolon, format!("expected ';' after variable declaration"))?;
+
+        Ok(Stmt::Var { name, initializer })
+    }
+
+    pub fn statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
         if let Some(_) = self.matches(Print) {
@@ -132,31 +154,27 @@ impl Parser {
         }
     }
 
-    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+    fn print_statement(&mut self) -> ParseResult<Stmt> {
         let expr = self.expression()?;
 
-        if !self.expect(TokenType::Semicolon) {
-            return Err(self.error(format!("expected ';'")));
-        };
+        self.expect(TokenType::Semicolon, format!("expected ';'"))?;
 
         Ok(Stmt::Print { expr })
     }
 
-    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
+    fn expression_statement(&mut self) -> ParseResult<Stmt> {
         let expr = self.expression()?;
 
-        if !self.expect(TokenType::Semicolon) {
-            return Err(self.error(format!("expected ';'")));
-        };
+        self.expect(TokenType::Semicolon, format!("expected ';'"))?;
 
         Ok(Stmt::Expression { expr })
     }
 
-    pub fn expression(&mut self) -> ParseResult {
+    pub fn expression(&mut self) -> ParseResult<Expr> {
         self.equality()
     }
 
-    pub fn equality(&mut self) -> ParseResult {
+    pub fn equality(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
         let mut expr = self.comparison()?;
 
@@ -168,7 +186,7 @@ impl Parser {
         Ok(expr)
     }
 
-    pub fn comparison(&mut self) -> ParseResult {
+    pub fn comparison(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
         let mut expr = self.term()?;
 
@@ -180,7 +198,7 @@ impl Parser {
         Ok(expr)
     }
 
-    pub fn term(&mut self) -> ParseResult {
+    pub fn term(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
         let mut expr = self.factor()?;
 
@@ -192,7 +210,7 @@ impl Parser {
         Ok(expr)
     }
 
-    pub fn factor(&mut self) -> ParseResult {
+    pub fn factor(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
         let mut expr = self.unary()?;
 
@@ -204,7 +222,7 @@ impl Parser {
         Ok(expr)
     }
 
-    pub fn unary(&mut self) -> ParseResult {
+    pub fn unary(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
 
         if let Some(op) = self.match_any(&[Bang, Minus]) {
@@ -215,7 +233,7 @@ impl Parser {
         }
     }
 
-    pub fn primary(&mut self) -> ParseResult {
+    pub fn primary(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
 
         if let Some(_) = self.matches(False) {
@@ -245,14 +263,15 @@ impl Parser {
             return Ok(Expr::Literal { value: LoxLiteral::Num(value) });
         }
 
+        if let Some(name) = self.matches(Identifier) {
+           return Ok(Expr::Variable { name });
+        }
+
         if let Some(_) = self.matches(LeftParen) {
             let expr = self.expression()?;
+            self.expect(RightParen, format!("expected ')'"))?;
 
-            if self.expect(RightParen) {
-               return Ok(Expr::Grouping { expr: Box::new(expr) });
-            } else {
-                return Err(self.error(format!("Expected ')'")));
-            }
+            return Ok(Expr::Grouping { expr: Box::new(expr) });
         }
 
         Err(self.error(format!("expected expression")))
@@ -262,7 +281,7 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.finished() {
-            match self.statement() {
+            match self.declaration() {
                 Ok(statement) => {
                     statements.push(statement)
                 },

@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use evaluate::Interpret;
+use interpreter::Interpreter;
 use parser::Parser;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
@@ -16,7 +16,8 @@ pub mod ast;
 pub mod pretty_print;
 pub mod tokens;
 pub mod span;
-pub mod evaluate;
+pub mod interpreter;
+pub mod environment;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -83,10 +84,23 @@ impl Loxide {
     }
 
     pub fn run(&mut self, input: &str) {
+        // Tokenizing
         let mut scanner = Scanner::new(input);
         let tokens: Vec<Token> = scanner.by_ref().collect();
+
+        #[cfg(debug)] {
+            println!("Tokens:");
+            for token in tokens.iter() {
+                println!("{token:?}");
+            }
+        }
+
+
+        // Parsing
         let mut parser = Parser::new(tokens);
         let parsed = parser.parse();
+
+        // Error reporting
 
         // Move this up, somewhere else?
         for error in scanner.errors() {
@@ -106,8 +120,20 @@ impl Loxide {
             }
         };
 
-        // Evaluate
-        match ast.interpret() {
+        #[cfg(debug)] {
+            println!("Statements:");
+            for statement in ast.iter() {
+                println!("{statement:?}");
+            }
+        }
+
+
+
+        // Interpreting
+
+        let mut intepreter = Interpreter::new();
+
+        match intepreter.interpret(ast) {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;

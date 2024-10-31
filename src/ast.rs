@@ -95,10 +95,14 @@ pub enum Expr {
     Literal {
         value: LoxLiteral,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expression { expr: Expr },
     Print { expr: Expr },
+    Var { name: Token, initializer: Option<Expr> }
 }
