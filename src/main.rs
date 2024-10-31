@@ -3,8 +3,10 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
+use errors::RichError;
 use interpreter::Interpreter;
 use parser::Parser;
+use sourcemap::SourceMap;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
 use tokens::Token;
@@ -18,6 +20,8 @@ pub mod tokens;
 pub mod span;
 pub mod interpreter;
 pub mod environment;
+pub mod errors;
+pub mod sourcemap;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -84,17 +88,18 @@ impl Loxide {
     }
 
     pub fn run(&mut self, input: &str) {
+        let sourcemap = SourceMap::new(input);
+
         // Tokenizing
         let mut scanner = Scanner::new(input);
         let tokens: Vec<Token> = scanner.by_ref().collect();
 
-        #[cfg(debug)] {
-            println!("Tokens:");
-            for token in tokens.iter() {
-                println!("{token:?}");
-            }
+        // Move this up, somewhere else?
+        for error in scanner.errors() {
+            self.static_error = true;
+            let annotated = RichError::annotate(error.clone(), &sourcemap);
+            eprintln!("{}", annotated);
         }
-
 
         // Parsing
         let mut parser = Parser::new(tokens);
@@ -102,32 +107,19 @@ impl Loxide {
 
         // Error reporting
 
-        // Move this up, somewhere else?
-        for error in scanner.errors() {
-            self.static_error = true;
-            eprintln!("[{RED}ERR{NORMAL}] Lexer error: {}", error.msg);
-        }
 
         let ast = match parsed {
             Ok(ast) => ast,
             Err(errors) => {
                 for error in errors {
                     self.static_error = true;
-                    eprintln!("[{RED}ERR{NORMAL}] Parse error: {}", error.msg);
+                    let annotated = RichError::annotate(error, &sourcemap);
+                    eprintln!("{}", annotated);
                 }
 
                 return;
             }
         };
-
-        #[cfg(debug)] {
-            println!("Statements:");
-            for statement in ast.iter() {
-                println!("{statement:?}");
-            }
-        }
-
-
 
         // Interpreting
 
@@ -137,7 +129,8 @@ impl Loxide {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;
-                eprintln!("[{RED}ERR{NORMAL}] Runtime error: {}", error.msg);
+                let annotated = RichError::annotate(error, &sourcemap);
+                eprintln!("{}", annotated);
             }
         }
     }

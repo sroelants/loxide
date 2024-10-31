@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+use crate::errors::BaseError;
+use crate::errors::Stage;
 use crate::span::Span;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
@@ -16,7 +18,7 @@ pub struct Scanner<'a> {
     finished: bool,
     chars: Peekable<Chars<'a>>,
     span: Span,
-    errors: Vec<LexError>,
+    pub errors: Vec<BaseError>,
 }
 
 impl<'a> Scanner<'a> {
@@ -30,14 +32,15 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn errors(&self) -> &[LexError] {
+    pub fn errors(&self) -> &[BaseError] {
         self.errors.as_slice()
     }
 
     /// Push a new LexError to the internal list of encountered errors
     fn error(&mut self, msg: &'static str) {
-        self.errors.push(LexError {
-            msg,
+        self.errors.push(BaseError {
+            stage: Stage::Lexer,
+            msg: msg.to_owned(),
             span: self.span,
         });
     }

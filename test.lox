@@ -1,8 +1,8 @@
 var a = 1;
 var b = 2;
-var c = 999;
 
 {
+  var d = 5;
   var c = 3;
   print a + b + c;
   print "Hello from inside the scope!";

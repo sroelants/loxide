@@ -4,15 +4,12 @@ use crate::ast::LoxLiteral as Lit;
 use crate::ast::Expr;
 use crate::ast::Stmt;
 use crate::environment::Env;
+use crate::errors::BaseError;
+use crate::errors::Stage;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 
-pub struct RuntimeError {
-    pub token: Token,
-    pub msg: String,
-}
-
-type Result<T> = std::result::Result<T, RuntimeError>;
+type Result<T> = std::result::Result<T, BaseError>;
 
 pub struct Interpreter {
     env: Env
@@ -127,8 +124,9 @@ impl Interpreter {
                 } else if let (Lit::Str(left), Lit::Str(right)) = (left, right) {
                     Ok(Lit::Str(format!("{left}{right}")))
                 } else {
-                    Err(RuntimeError {
-                        token: op,
+                    Err(BaseError {
+                        stage: Stage::Runtime,
+                        span: op.span,
                         msg: format!("operands must be string or number")
                     })
                 }
@@ -198,7 +196,7 @@ fn assert_str(op: &Token, lit: Lit) -> Result<String> {
     if let Lit::Str(str) = lit {
        Ok(str)
     } else {
-        Err(RuntimeError { token: op.clone(), msg: format!("operand must be string") })
+        Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be string") })
     }
 }
 
@@ -206,7 +204,7 @@ fn assert_num(op: &Token, lit: Lit) -> Result<f64> {
     if let Lit::Num(num) = lit {
        Ok(num)
     } else {
-        Err(RuntimeError { token: op.clone(), msg: format!("operand must be number") })
+        Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be number") })
     }
 }
 
@@ -214,6 +212,6 @@ fn assert_bool(op: &Token, lit: Lit) -> Result<bool> {
     if let Lit::Bool(boolean) = lit {
        Ok(boolean)
     } else {
-       Err(RuntimeError { token: op.clone(), msg: format!("operand must be boolean") })
+       Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be boolean") })
     }
 }

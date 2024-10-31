@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::LoxLiteral, interpreter::RuntimeError, tokens::Token};
+use crate::{ast::LoxLiteral, errors::{BaseError, Stage}, tokens::Token};
 
 pub struct Env {
     scopes: Vec<HashMap<String, LoxLiteral>>,
@@ -25,7 +25,7 @@ impl Env {
         self.scopes.last_mut().unwrap().insert(name.lexeme, value);
     }
 
-    pub fn assign(&mut self, name: Token, value: LoxLiteral) -> Result<(), RuntimeError> {
+    pub fn assign(&mut self, name: Token, value: LoxLiteral) -> Result<(), BaseError> {
         for scope in self.scopes.iter_mut().rev() {
             if scope.contains_key(&name.lexeme) {
                 scope.insert(name.lexeme, value);
@@ -33,22 +33,24 @@ impl Env {
             }
         }
 
-        Err(RuntimeError {
+        Err(BaseError {
+            stage: Stage::Runtime,
             msg: format!("undeclared variable '{name}'"),
-            token: name,
+            span: name.span,
         })
     }
 
-    pub fn get(&self, name: Token) -> Result<LoxLiteral, RuntimeError> {
+    pub fn get(&self, name: Token) -> Result<LoxLiteral, BaseError> {
         for scope in self.scopes.iter().rev() {
             if let Some(value) = scope.get(&name.lexeme) {
                 return Ok(value.to_owned());
             }
         }
 
-        Err(RuntimeError {
+        Err(BaseError {
+            stage: Stage::Runtime,
             msg: format!("undeclared variable '{name}'"),
-            token: name,
+            span: name.span,
         })
     }
 }

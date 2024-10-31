@@ -7,23 +7,19 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 use crate::ast::Ast;
 use crate::ast::Stmt;
+use crate::errors::BaseError;
+use crate::errors::Stage;
 use crate::span::Span;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 use crate::ast::Expr;
 use crate::ast::LoxLiteral;
 
-type ParseResult<T> = Result<T, ParseError>;
-
-#[derive(Debug, Clone)]
-pub struct ParseError {
-    pub span: Span,
-    pub msg: String,
-}
+type ParseResult<T> = Result<T, BaseError>;
 
 pub struct Parser {
     tokens: Peekable<IntoIter<Token>>,
-    errors: Vec<ParseError>,
+    errors: Vec<BaseError>,
     span: Span,
 
 }
@@ -45,12 +41,12 @@ impl Parser {
         }
     }
 
-    pub fn errors(&self) -> &[ParseError] {
+    pub fn errors(&self) -> &[BaseError] {
         self.errors.as_slice()
     }
 
-    fn error(&mut self, msg: String) -> ParseError {
-        ParseError { span: self.span, msg }
+    fn error(&mut self, msg: String) -> BaseError {
+        BaseError { stage: Stage::Parser, span: self.span, msg }
     }
 
     /// Checks whether the next token matches the provided type, without
@@ -111,11 +107,11 @@ impl Parser {
 
     pub fn expect(&mut self, expected: TokenType, msg: String) -> ParseResult<Token> {
         let Some(next) = self.tokens.peek() else {
-            return Err(ParseError { span: self.span, msg })
+            return Err(BaseError { stage: Stage::Parser, span: self.span, msg })
         };
 
         if next.token_type != expected {
-            return Err(ParseError { span: self.span, msg })
+            return Err(BaseError { stage: Stage::Parser, span: self.span, msg })
         }
 
         Ok(self.consume().unwrap())
@@ -308,7 +304,7 @@ impl Parser {
         Err(self.error(format!("expected expression")))
     }
 
-    pub fn parse(&mut self) -> Result<Ast, Vec<ParseError>> {
+    pub fn parse(&mut self) -> Result<Ast, Vec<BaseError>> {
         let mut statements = Vec::new();
 
         while !self.finished() {
