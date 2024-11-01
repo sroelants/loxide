@@ -366,8 +366,54 @@ impl Parser {
             let right = self.unary()?;
             Ok(Expr::Unary { op, right: Box::new(right) })
         } else {
-            self.primary()
+            self.call()
         }
+    }
+
+    pub fn call(&mut self) -> ParseResult<Expr> {
+        use TokenType::*;
+
+        // Parse function expression
+        // (remember: primary can also be a parenthesized expression)
+        let mut expr = self.primary()?;
+
+        // deal with chained function calls (curried functions)
+        loop {
+            if let Some(_) = self.matches(LeftParen) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> ParseResult<Expr> {
+        use TokenType::*;
+        let mut arguments = Vec::new();
+
+        if !self.check(RightParen) {
+            // match the first argument,
+            arguments.push(self.expression()?);
+
+            // match any following arguments, followed by a comma
+            while let Some(_) = self.matches(Comma) {
+                if arguments.len() >= 255 {
+                    self.errors.push(BaseError {
+                        stage: Stage::Parser,
+                        span: self.tokens.peek().unwrap().span,
+                        msg: format!("Can't have more than 255 arguments"),
+                    });
+                }
+
+                arguments.push(self.expression()?);
+            }
+        }
+
+        let paren = self.expect(RightParen, format!("expect ')' after arguments"))?;
+
+        Ok(Expr::Call { callee: Box::new(callee), paren, arguments })
     }
 
     pub fn primary(&mut self) -> ParseResult<Expr> {

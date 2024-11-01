@@ -88,6 +88,13 @@ pub enum Expr {
         left: Box<Expr>,
         right: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
+    Assignment {
+        name: Token,
+        value: Box<Expr>,
+    },
     Logical {
         op: Token,
         left: Box<Expr>,
@@ -97,15 +104,13 @@ pub enum Expr {
         op: Token,
         right: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>
+    },
     Literal {
         value: LoxLiteral,
-    },
-    Variable {
-        name: Token,
-    },
-    Assignment {
-        name: Token,
-        value: Box<Expr>,
     },
 }
 
