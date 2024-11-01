@@ -28,7 +28,7 @@ impl<'a> SourceMap<'a> {
             .iter()
             .enumerate()
             .rev()
-            .find(|(_, &offset)| span.offset > offset)
+            .find(|(_, &offset)| span.offset >= offset)
             .unwrap_or((10, &10));
 
 
