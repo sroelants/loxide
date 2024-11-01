@@ -1,12 +1,17 @@
-use crate::tokens::Token;
-use std::fmt::Display;
+use crate::{interpreter::Interpreter, tokens::Token};
+use std::{fmt::Display, rc::Rc};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum LoxLiteral {
     Bool(bool),
     Num(f64),
     Str(String),
+    Callable(Rc<dyn Call>), // What goes here?
     Nil,
+}
+
+trait Call {
+    fn call(&self, interpreter: &Interpreter, args: &[LoxLiteral]) -> LoxLiteral;
 }
 
 impl PartialEq for LoxLiteral {
@@ -72,6 +77,7 @@ impl<'a> Display for LoxLiteral {
             LoxLiteral::Num(val) => write!(f, "{val}"),
             LoxLiteral::Bool(val) => write!(f, "{val}"),
             LoxLiteral::Str(val) => write!(f, "{val}"),
+            LoxLiteral::Callable(_) => write!(f, "<function>"),
         }
     }
 }
