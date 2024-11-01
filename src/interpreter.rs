@@ -31,12 +31,12 @@ impl Interpreter {
     fn execute(&mut self, statement: &Stmt) -> Result<Lit> {
         match statement {
             Stmt::Print { expr } => {
-                let val = self.interpret_expr(expr)?;
+                let val = self.evaluate(expr)?;
                 println!("{val}");
             }
 
             Stmt::If { condition, then_branch, else_branch } => {
-                if is_truthy(&self.interpret_expr(condition)?) {
+                if is_truthy(&self.evaluate(condition)?) {
                     self.execute(then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.execute(else_branch)?;
@@ -44,18 +44,18 @@ impl Interpreter {
             }
 
             Stmt::While { condition, body } => {
-                while is_truthy(&self.interpret_expr(condition)?) {
+                while is_truthy(&self.evaluate(condition)?) {
                     self.execute(body)?;
                 }
             }
 
             Stmt::Expression { expr } => {
-               self.interpret_expr(expr)?;
+               self.evaluate(expr)?;
             }
 
             Stmt::Var { name, initializer } => {
                 let value = if let Some(expr) = initializer {
-                    self.interpret_expr(expr)?
+                    self.evaluate(expr)?
                 } else {
                     Lit::Nil
                 };
@@ -64,14 +64,14 @@ impl Interpreter {
             }
 
             Stmt::Block { statements } => {
-                self.interpret_block(statements)?;
+                self.eval_block(statements)?;
             }
         };
 
         Ok(Lit::Nil)
     }
 
-    fn interpret_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
+    fn eval_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
         self.env.push_scope();
 
         for statement in statements.iter() {
@@ -85,24 +85,24 @@ impl Interpreter {
         Ok(Lit::Nil)
     }
 
-    fn interpret_expr(&mut self, expr: &Expr) -> Result<Lit> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Lit> {
         match expr {
             Expr::Literal { value } => Ok(value.clone()),
 
             Expr::Call { callee, arguments, paren } => self.eval_call(callee, arguments, &paren),
 
-            Expr::Grouping { expr } => self.interpret_expr(expr),
+            Expr::Grouping { expr } => self.evaluate(expr),
 
-            Expr::Unary { op, right } => self.interpret_unary(op, right),
+            Expr::Unary { op, right } => self.eval_unary(op, right),
 
-            Expr::Binary { op, left, right } => self.interpret_binary(op, left, right),
+            Expr::Binary { op, left, right } => self.eval_binary(op, left, right),
 
-            Expr::Logical { op, left, right } => self.interpret_logical(op, left, right),
+            Expr::Logical { op, left, right } => self.eval_logical(op, left, right),
 
             Expr::Variable { name } => self.env.get(name),
 
             Expr::Assignment { name, value } => {
-                let value = self.interpret_expr(value)?;
+                let value = self.evaluate(value)?;
                 self.env.assign(name, value.clone())?;
                 Ok(value)
             }
@@ -110,11 +110,11 @@ impl Interpreter {
     }
 
     fn eval_call(&mut self, callee: &Expr, args: &[Expr], token: &Token) -> Result<Lit> {
-        let callee = self.interpret_expr(callee)?;
+        let callee = self.evaluate(callee)?;
         let mut evaluated_args = Vec::new();
 
         for arg in args {
-            evaluated_args.push(self.interpret_expr(arg)?);
+            evaluated_args.push(self.evaluate(arg)?);
         }
 
         if let Lit::Callable(fun) = callee {
@@ -136,8 +136,8 @@ impl Interpreter {
         }
     }
 
-    fn interpret_unary(&mut self, op: &Token, right: &Expr) -> Result<Lit> {
-        let right = self.interpret_expr(right)?;
+    fn eval_unary(&mut self, op: &Token, right: &Expr) -> Result<Lit> {
+        let right = self.evaluate(right)?;
 
         match op.token_type {
             TokenType::Bang => Ok(Lit::Bool(!is_truthy(&right))),
@@ -151,8 +151,8 @@ impl Interpreter {
         }
     }
 
-    fn interpret_logical(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
-        let left = self.interpret_expr(left)?;
+    fn eval_logical(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
+        let left = self.evaluate(left)?;
 
         if op.token_type == TokenType::Or {
             if is_truthy(&left) {
@@ -164,12 +164,12 @@ impl Interpreter {
             }
         }
 
-        self.interpret_expr(right)
+        self.evaluate(right)
     }
 
-    fn interpret_binary(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
-        let left = self.interpret_expr(left)?;
-        let right = self.interpret_expr(right)?;
+    fn eval_binary(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
+        let left = self.evaluate(left)?;
+        let right = self.evaluate(right)?;
 
         match op.token_type {
             TokenType::Minus => {
