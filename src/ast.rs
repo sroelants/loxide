@@ -10,8 +10,15 @@ pub enum LoxLiteral {
     Nil,
 }
 
-trait Call {
+pub trait Call {
     fn call(&self, interpreter: &Interpreter, args: &[LoxLiteral]) -> LoxLiteral;
+    fn arity(&self) -> usize;
+}
+
+impl Display for dyn Call {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<function>")
+    }
 }
 
 impl PartialEq for LoxLiteral {
@@ -70,7 +77,7 @@ impl LoxLiteral {
     }
 }
 
-impl<'a> Display for LoxLiteral {
+impl<> Display for LoxLiteral {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LoxLiteral::Nil => write!(f, "nil"),
@@ -84,7 +91,7 @@ impl<'a> Display for LoxLiteral {
 
 pub type Ast = Vec<Stmt>;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Expr {
     Grouping {
         expr: Box<Expr>,
@@ -96,7 +103,7 @@ pub enum Expr {
     },
     Variable {
         name: Token,
-    },
+ },
     Assignment {
         name: Token,
         value: Box<Expr>,
@@ -120,7 +127,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Stmt {
     Block {
         statements: Vec<Stmt>,
