@@ -89,6 +89,8 @@ impl Interpreter {
         match expr {
             Expr::Literal { value } => Ok(value.clone()),
 
+            Expr::Call { callee, arguments, paren } => self.eval_call(callee, arguments, &paren),
+
             Expr::Grouping { expr } => self.interpret_expr(expr),
 
             Expr::Unary { op, right } => self.interpret_unary(op, right),
@@ -104,6 +106,33 @@ impl Interpreter {
                 self.env.assign(name, value.clone())?;
                 Ok(value)
             }
+        }
+    }
+
+    fn eval_call(&mut self, callee: &Expr, args: &[Expr], token: &Token) -> Result<Lit> {
+        let callee = self.interpret_expr(callee)?;
+        let mut evaluated_args = Vec::new();
+
+        for arg in args {
+            evaluated_args.push(self.interpret_expr(arg)?);
+        }
+
+        if let Lit::Callable(fun) = callee {
+            if args.len() != fun.arity() {
+                return Err(BaseError {
+                    stage: Stage::Runtime,
+                    span: token.span, //TODO Wouldn't I rather store the function identifier/expression?
+                    msg: format!("expected {} arguments, but got {}", args.len(), fun.arity())
+                })
+            }
+
+            Ok(fun.call(self, &evaluated_args))
+        } else {
+            Err(BaseError {
+                stage: Stage::Runtime,
+                span: token.span, //TODO Wouldn't I rather store the function identifier/expression?
+                msg: format!("Expression is not callable")
+            })
         }
     }
 
