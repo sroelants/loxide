@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc};
 
 use crate::{
     ast::{LoxLiteral, Stmt},
@@ -15,6 +15,7 @@ pub trait Call: Display {
         interpreter: &mut Interpreter,
         args: &[LoxLiteral],
     ) -> Result<LoxLiteral, Spanned<LoxError>>;
+
     fn arity(&self) -> usize;
 }
 
@@ -22,6 +23,7 @@ pub struct LoxFunction {
     pub name: Token,
     pub params: Vec<Token>,
     pub body: Vec<Stmt>,
+    pub env: Rc<Env>,
 }
 
 impl Call for LoxFunction {
@@ -30,13 +32,14 @@ impl Call for LoxFunction {
         interpreter: &mut Interpreter,
         args: &[LoxLiteral],
     ) -> Result<LoxLiteral, Spanned<LoxError>> {
-        let env = Env::new(interpreter.global.clone());
+        let local_scope = Rc::new(Env::new(self.env.clone()));
+
         for (param, arg) in self.params.iter().zip(args) {
-            env.define(param, arg.clone())
+            local_scope.define(param, arg.clone())
         }
 
         // Catch any return statements that are bubbled up by throwing an error
-        match interpreter.exec_block_with_env(&self.body, env) {
+        match interpreter.exec_block_with_env(&self.body, local_scope) {
             Err(Spanned {
                 value: LoxError::Return(value),
                 ..

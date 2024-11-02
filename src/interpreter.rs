@@ -16,17 +16,13 @@ use crate::tokens::TokenType;
 type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
 pub struct Interpreter {
-    pub global: Rc<Env>,
     pub env: Rc<Env>
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let global = Rc::new(Env::global());
-
         Self {
-            global: global.clone(),
-            env: global.clone(),
+            env: Rc::new(Env::global()),
         }
     }
 
@@ -104,6 +100,7 @@ impl Interpreter {
                     name: name.clone(),
                     params: params.clone(),
                     body: body.clone(),
+                    env: self.env.clone(),
                 };
 
                 self.env.define(name, Lit::Callable(Rc::new(function)));
@@ -128,8 +125,8 @@ impl Interpreter {
     }
 
     // Additional helper that allows us to execute a block with a given environment.
-    pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Env) -> Result<Lit> {
-        let prev_env = std::mem::replace(&mut self.env, Rc::new(env));
+    pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Rc<Env>) -> Result<Lit> {
+        let prev_env = std::mem::replace(&mut self.env, env);
 
         for statement in statements.iter() {
             if let Err(err) = self.execute(statement) {
