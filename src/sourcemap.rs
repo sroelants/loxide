@@ -1,4 +1,4 @@
-use crate::span::Span;
+use crate::span::{Span, Spanned, Annotated};
 
 pub struct SourceMap<'a> {
     lines: Vec<&'a str>,
@@ -36,5 +36,10 @@ impl<'a> SourceMap<'a> {
         let source = self.lines[line_idx];
 
         (line_idx + 1, col, source)
+    }
+
+    pub fn annotate<T>(&self, spanned: Spanned<T>) -> Annotated<T> {
+        let (line, col, source) = self.map_span(spanned.span);
+        Annotated { value: spanned.value, span: spanned.span, line, col, source }
     }
 }

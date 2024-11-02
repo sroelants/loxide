@@ -1,9 +1,9 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::errors::BaseError;
-use crate::errors::Stage;
+use crate::errors::LoxError;
 use crate::span::Span;
+use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 
@@ -18,7 +18,7 @@ pub struct Scanner<'a> {
     finished: bool,
     chars: Peekable<Chars<'a>>,
     span: Span,
-    pub errors: Vec<BaseError>,
+    pub errors: Vec<Spanned<LoxError>>,
 }
 
 impl<'a> Scanner<'a> {
@@ -32,15 +32,14 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn errors(&self) -> &[BaseError] {
+    pub fn errors(&self) -> &[Spanned<LoxError>] {
         self.errors.as_slice()
     }
 
     /// Push a new LexError to the internal list of encountered errors
-    fn error(&mut self, msg: &'static str) {
-        self.errors.push(BaseError {
-            stage: Stage::Lexer,
-            msg: msg.to_owned(),
+    fn error(&mut self, err: LoxError) {
+        self.errors.push(Spanned {
+            value: err,
             span: self.span,
         });
     }
@@ -102,7 +101,7 @@ impl<'a> Scanner<'a> {
         if self.consume_char() == Some('"') {
             true
         } else {
-            self.error("unterminated string");
+            self.error(LoxError::UnterminatedString);
             false
         }
     }
@@ -202,7 +201,7 @@ impl<'a> Iterator for Scanner<'a> {
                 }
 
                 _ => {
-                    self.error("unrecognized input");
+                    self.error(LoxError::UnexpectedToken);
                     continue;
                 }
             };

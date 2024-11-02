@@ -1,5 +1,18 @@
 use std::ops::Range;
 
+pub struct Spanned<T> {
+    pub value: T,
+    pub span: Span,
+}
+
+pub struct Annotated<'a, T> {
+    pub value: T,
+    pub span: Span,
+    pub line: usize,
+    pub col: usize,
+    pub source: &'a str
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
     pub offset: usize,

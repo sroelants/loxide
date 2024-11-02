@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use std::rc::Rc;
+
 use crate::ast::Ast;
 use crate::ast::LoxLiteral as Lit;
 use crate::ast::Expr;
@@ -6,6 +8,7 @@ use crate::ast::Stmt;
 use crate::environment::Env;
 use crate::errors::BaseError;
 use crate::errors::Stage;
+use crate::functions::LoxFunction;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 
@@ -64,14 +67,24 @@ impl Interpreter {
             }
 
             Stmt::Block { statements } => {
-                self.eval_block(statements)?;
+                self.exec_block(statements)?;
             }
+
+            Stmt::Fun { name, params, body } => {
+                let function = LoxFunction {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                };
+
+                self.env.define(name, Lit::Callable(Rc::new(function)));
+            },
         };
 
         Ok(Lit::Nil)
     }
 
-    fn eval_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
+    fn exec_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
         self.env.push_scope();
 
         for statement in statements.iter() {
@@ -82,6 +95,21 @@ impl Interpreter {
         }
 
         self.env.pop_scope();
+        Ok(Lit::Nil)
+    }
+
+    // Additional helper that allows us to execute a block with a given environment.
+    pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Env) -> Result<Lit> {
+        let prev_env = std::mem::replace(&mut self.env, env);
+
+        for statement in statements.iter() {
+            if let Err(err) = self.execute(statement) {
+                self.env = prev_env;
+                return Err(err);
+            }
+        }
+
+        self.env = prev_env;
         Ok(Lit::Nil)
     }
 
@@ -126,7 +154,7 @@ impl Interpreter {
                 })
             }
 
-            Ok(fun.call(self, &evaluated_args))
+            fun.call(self, &evaluated_args)
         } else {
             Err(BaseError {
                 stage: Stage::Runtime,

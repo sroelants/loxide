@@ -7,19 +7,19 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 use crate::ast::Ast;
 use crate::ast::Stmt;
-use crate::errors::BaseError;
-use crate::errors::Stage;
+use crate::errors::LoxError;
 use crate::span::Span;
+use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 use crate::ast::Expr;
 use crate::ast::LoxLiteral;
 
-type ParseResult<T> = Result<T, BaseError>;
+type ParseResult<T> = Result<T, Spanned<LoxError>>;
 
 pub struct Parser {
     tokens: Peekable<IntoIter<Token>>,
-    errors: Vec<BaseError>,
+    errors: Vec<Spanned<LoxError>>,
     span: Span,
 
 }
@@ -41,12 +41,12 @@ impl Parser {
         }
     }
 
-    pub fn errors(&self) -> &[BaseError] {
+    pub fn errors(&self) -> &[Spanned<LoxError>] {
         self.errors.as_slice()
     }
 
-    fn error(&mut self, msg: String) -> BaseError {
-        BaseError { stage: Stage::Parser, span: self.span, msg }
+    fn error(&mut self, err: LoxError) -> Spanned<LoxError> {
+        Spanned { value: err, span: self.span }
     }
 
     /// Checks whether the next token matches the provided type, without
@@ -105,13 +105,13 @@ impl Parser {
         None
     }
 
-    pub fn expect(&mut self, expected: TokenType, msg: String) -> ParseResult<Token> {
+    pub fn expect(&mut self, expected: TokenType, err: LoxError) -> ParseResult<Token> {
         let Some(next) = self.tokens.peek() else {
-            return Err(BaseError { stage: Stage::Parser, span: self.span, msg })
+            return Err(Spanned { value: err, span: self.span })
         };
 
         if next.token_type != expected {
-            return Err(BaseError { stage: Stage::Parser, span: self.span, msg })
+            return Err(Spanned { value: err, span: self.span })
         }
 
         Ok(self.consume().unwrap())
@@ -127,7 +127,7 @@ impl Parser {
 
     pub fn var_declaration(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        let name = self.expect(Identifier, format!("expected variable name"))?;
+        let name = self.expect(Identifier, LoxError::ExpectedVarName)?;
 
         let initializer = if let Some(_) = self.matches(Equal) {
             Some(self.expression()?)
@@ -135,7 +135,7 @@ impl Parser {
             None
         };
 
-        self.expect(Semicolon, format!("expected ';' after variable declaration"))?;
+        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
 
         Ok(Stmt::Var { name, initializer })
     }
@@ -143,7 +143,9 @@ impl Parser {
     pub fn statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        if let Some(_) = self.matches(If) {
+        if let Some(_) = self.matches(Fun) {
+            self.function("function")
+        } else if let Some(_) = self.matches(If) {
             self.if_statement()
         } else if let Some(_) = self.matches(While) {
             self.while_statement()
@@ -158,12 +160,48 @@ impl Parser {
         }
     }
 
+    pub fn function(&mut self, _kind: &str) -> ParseResult<Stmt> {
+        use TokenType::*;
+
+        // Parse identifier
+        let name = self.expect(Identifier, LoxError::ExpectedFunName)?;
+        self.expect(LeftParen, LoxError::ExpectedLeftParen("after function name"))?;
+
+        // Parse params
+        let mut params = Vec::new();
+
+        if !self.check(RightParen) {
+            params.push(self.expect(Identifier, LoxError::ExpectedParamName(""))?);
+
+            while let Some(_) = self.matches(Comma) {
+                if params.len() >= 255 {
+                    self.errors.push(Spanned {
+                        value: LoxError::TooManyParams,
+                        span: self.tokens.peek().unwrap().span,
+                    })
+                }
+
+                params.push(
+                    self.expect(Identifier, LoxError::ExpectedParamName(""))?
+                );
+            }
+        }
+
+        self.expect(RightParen, LoxError::ExpectedRightParen("after parameters"))?;
+
+        // Parse body
+        self.expect(LeftBrace, LoxError::ExpectedLeftBrace("before function body"))?;
+        let body = self.block()?;
+
+        Ok(Stmt::Fun { name, params, body })
+    }
+
     pub fn if_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        self.expect(LeftParen, format!("expected '(' after 'if'"))?;
+        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'if'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, format!("expected ')' after if condition"))?;
+        self.expect(RightParen, LoxError::ExpectedRightParen("after if condition"))?;
 
         let then_branch = Box::new(self.statement()?);
 
@@ -178,9 +216,9 @@ impl Parser {
 
     pub fn while_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        self.expect(LeftParen, format!("expected '(' after 'while'"))?;
+        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'while'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, format!("expected ')' after while condition"))?;
+        self.expect(RightParen, LoxError::ExpectedRightParen("after while condition"))?;
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While { condition, body })
@@ -189,7 +227,7 @@ impl Parser {
     pub fn for_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        self.expect(LeftParen, format!("expected '(' after 'for'"))?;
+        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'for'"))?;
 
         let initializer = if let Some(_) = self.matches(Semicolon) {
             None
@@ -205,7 +243,7 @@ impl Parser {
             None
         };
 
-        self.expect(Semicolon, format!("expected ';' after loop condition"))?;
+        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
 
         let increment = if !self.check(RightParen) {
             Some(self.expression()?)
@@ -213,7 +251,7 @@ impl Parser {
            None
         };
 
-        self.expect(RightParen, format!("expected ')' after for-clause"))?;
+        self.expect(RightParen, LoxError::ExpectedRightParen("after for clause"))?;
 
         let mut body = self.statement()?;
 
@@ -237,29 +275,32 @@ impl Parser {
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
         let expr = self.expression()?;
 
-        self.expect(TokenType::Semicolon, format!("expected ';'"))?;
+        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
 
         Ok(Stmt::Print { expr })
     }
 
     fn block(&mut self) -> ParseResult<Vec<Stmt>> {
+        use TokenType::*;
         let mut statements = Vec::new();
 
         while !self.check(TokenType::RightBrace) && !self.finished() {
             statements.push(self.declaration()?)
         }
 
-        self.expect(TokenType::RightBrace, format!("expected '}}' after block"))?;
+        self.expect(RightBrace, LoxError::ExpectedRightBrace("after block"))?;
         Ok(statements)
     }
 
 
     fn expression_statement(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
         let expr = self.expression()?;
 
-        self.expect(TokenType::Semicolon, format!("expected ';'"))?;
+        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
 
         Ok(Stmt::Expression { expr })
     }
@@ -279,7 +320,7 @@ impl Parser {
                 return Ok(Expr::Assignment { name, value: Box::new(value) });
             }
 
-            return Err(self.error(format!("Invalid assignment target")));
+            return Err(self.error(LoxError::InvalidAssigTarget));
         }
 
         return Ok(expr);
@@ -400,10 +441,9 @@ impl Parser {
             // match any following arguments, followed by a comma
             while let Some(_) = self.matches(Comma) {
                 if arguments.len() >= 255 {
-                    self.errors.push(BaseError {
-                        stage: Stage::Parser,
+                    self.errors.push(Spanned {
+                        value: LoxError::TooManyArgs,
                         span: self.tokens.peek().unwrap().span,
-                        msg: format!("Can't have more than 255 arguments"),
                     });
                 }
 
@@ -411,7 +451,7 @@ impl Parser {
             }
         }
 
-        let paren = self.expect(RightParen, format!("expect ')' after arguments"))?;
+        let paren = self.expect(RightParen, LoxError::ExpectedRightBrace("after arguments"))?;
 
         Ok(Expr::Call { callee: Box::new(callee), paren, arguments })
     }
@@ -452,15 +492,15 @@ impl Parser {
 
         if let Some(_) = self.matches(LeftParen) {
             let expr = self.expression()?;
-            self.expect(RightParen, format!("expected ')'"))?;
+            self.expect(RightParen, LoxError::ExpectedRightParen(""))?;
 
             return Ok(Expr::Grouping { expr: Box::new(expr) });
         }
 
-        Err(self.error(format!("expected expression")))
+        Err(self.error(LoxError::ExpectedExpression))
     }
 
-    pub fn parse(&mut self) -> Result<Ast, Vec<BaseError>> {
+    pub fn parse(&mut self) -> Result<Ast, Vec<Spanned<LoxError>>> {
         let mut statements = Vec::new();
 
         while !self.finished() {

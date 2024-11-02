@@ -1,4 +1,5 @@
-use crate::{interpreter::Interpreter, tokens::Token};
+use crate::functions::Call;
+use crate::tokens::Token;
 use std::{fmt::Display, rc::Rc};
 
 #[derive(Clone)]
@@ -6,19 +7,8 @@ pub enum LoxLiteral {
     Bool(bool),
     Num(f64),
     Str(String),
-    Callable(Rc<dyn Call>), // What goes here?
+    Callable(Rc<dyn Call>),
     Nil,
-}
-
-pub trait Call {
-    fn call(&self, interpreter: &Interpreter, args: &[LoxLiteral]) -> LoxLiteral;
-    fn arity(&self) -> usize;
-}
-
-impl Display for dyn Call {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<function>")
-    }
 }
 
 impl PartialEq for LoxLiteral {
@@ -84,7 +74,7 @@ impl<> Display for LoxLiteral {
             LoxLiteral::Num(val) => write!(f, "{val}"),
             LoxLiteral::Bool(val) => write!(f, "{val}"),
             LoxLiteral::Str(val) => write!(f, "{val}"),
-            LoxLiteral::Callable(_) => write!(f, "<function>"),
+            LoxLiteral::Callable(val) => write!(f, "{val}"),
         }
     }
 }
@@ -152,4 +142,9 @@ pub enum Stmt {
         name: Token,
         initializer: Option<Expr>,
     },
+    Fun {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    }
 }

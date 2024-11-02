@@ -22,6 +22,7 @@ pub mod interpreter;
 pub mod environment;
 pub mod errors;
 pub mod sourcemap;
+pub mod functions;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -95,9 +96,9 @@ impl Loxide {
         let tokens: Vec<Token> = scanner.by_ref().collect();
 
         // Move this up, somewhere else?
-        for error in scanner.errors() {
+        for error in scanner.errors {
             self.static_error = true;
-            let annotated = RichError::annotate(error.clone(), &sourcemap);
+            let annotated = sourcemap.annotate(error);
             eprintln!("{}", annotated);
         }
 
@@ -113,7 +114,7 @@ impl Loxide {
             Err(errors) => {
                 for error in errors {
                     self.static_error = true;
-                    let annotated = RichError::annotate(error, &sourcemap);
+                    let annotated = sourcemap.annotate(error);
                     eprintln!("{}", annotated);
                 }
 
