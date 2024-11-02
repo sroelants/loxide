@@ -8,6 +8,7 @@ use crate::ast::Stmt;
 use crate::environment::Env;
 use crate::errors::LoxError;
 use crate::functions::LoxFunction;
+use crate::span::Span;
 use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
@@ -36,6 +37,19 @@ impl Interpreter {
             Stmt::Print { expr } => {
                 let val = self.evaluate(expr)?;
                 println!("{val}");
+            }
+
+            Stmt::Return { keyword, expr } => {
+                let value = if let Some(expr) = expr {
+                    self.evaluate(expr)?
+                } else {
+                    Lit::Nil
+                };
+
+                Err(Spanned {
+                    value: LoxError::Return(value),
+                    span: Span::new(),
+                })?;
             }
 
             Stmt::If { condition, then_branch, else_branch } => {

@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::ast::Expr;
+use crate::ast::LoxLiteral;
 use crate::colors::{RED, NORMAL};
 
 use crate::span::Annotated;
@@ -36,7 +36,7 @@ pub enum LoxError {
     UndeclaredVar(String),
 
     // Not actual errors
-    Return(Expr),
+    Return(LoxLiteral),
 }
 
 impl Display for LoxError {

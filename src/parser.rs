@@ -143,7 +143,9 @@ impl Parser {
     pub fn statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        if let Some(_) = self.matches(Fun) {
+        if let Some(keyword) = self.matches(Return) {
+            self.return_statement(keyword)
+        } else if let Some(_) = self.matches(Fun) {
             self.function("function")
         } else if let Some(_) = self.matches(If) {
             self.if_statement()
@@ -158,6 +160,17 @@ impl Parser {
         } else {
             self.expression_statement()
         }
+    }
+
+    pub fn return_statement(&mut self, keyword: Token) -> ParseResult<Stmt> {
+        let expr = if self.check(TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+
+        self.expect(TokenType::Semicolon, LoxError::ExpectedSemicolon)?;
+        Ok(Stmt::Return { keyword, expr })
     }
 
     pub fn function(&mut self, _kind: &str) -> ParseResult<Stmt> {
