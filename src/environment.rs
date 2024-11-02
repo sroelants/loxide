@@ -1,4 +1,6 @@
-use std::{collections::HashMap, rc::Rc};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::errors::LoxError;
 use crate::functions::globals::Clock;
@@ -6,56 +8,59 @@ use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::ast::LoxLiteral;
 
+type Bindings = HashMap<String, LoxLiteral>;
+
 pub struct Env {
-    scopes: Vec<HashMap<String, LoxLiteral>>,
+    pub parent: Option<Rc<Env>>,
+    pub bindings: Rc<RefCell<Bindings>>,
 }
 
 impl Env {
-    pub fn new() -> Self {
-        let mut root_scope = HashMap::new();
-        root_scope.insert(format!("clock"), LoxLiteral::Callable(Rc::new(Clock)));
+    pub fn new(parent: Rc<Env>) -> Self {
+        Self {
+            parent: Some(parent),
+            bindings: Rc::new(RefCell::new(Bindings::new())),
+        }
+    }
+
+    pub fn global() -> Self {
+        let mut bindings = Bindings::new();
+        bindings.insert(format!("clock"), LoxLiteral::Callable(Rc::new(Clock)));
 
         Self {
-            scopes: vec![root_scope],
+            parent: None,
+            bindings: Rc::new(RefCell::new(bindings))
         }
     }
 
-    pub fn push_scope(&mut self) {
-        self.scopes.push(HashMap::new());
+    pub fn define(&self, name: &Token, value: LoxLiteral) {
+        self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
     }
 
-    pub fn pop_scope(&mut self) {
-        self.scopes.pop();
-    }
-
-    pub fn define(&mut self, name: &Token, value: LoxLiteral) {
-        self.scopes.last_mut().unwrap().insert(name.lexeme.to_owned(), value);
-    }
-
-    pub fn assign(&mut self, name: &Token, value: LoxLiteral) -> Result<(), Spanned<LoxError>> {
-        for scope in self.scopes.iter_mut().rev() {
-            if scope.contains_key(&name.lexeme) {
-                scope.insert(name.lexeme.to_owned(), value);
-                return Ok(())
-            }
+    pub fn assign(&self, name: &Token, value: LoxLiteral) -> Result<(), Spanned<LoxError>> {
+        if self.bindings.borrow().contains_key(&name.lexeme) {
+            self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
+            Ok(())
+        } else if let Some(parent) = &self.parent {
+            parent.assign(name, value)
+        } else {
+            Err(Spanned {
+                value: LoxError::UndeclaredVar(format!("{name}")),
+                span: name.span
+            })
         }
-
-        Err(Spanned {
-            value: LoxError::UndeclaredVar(format!("{name}")),
-            span: name.span
-        })
     }
 
     pub fn get(&self, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(value) = scope.get(&name.lexeme) {
-                return Ok(value.to_owned());
-            }
+        if let Some(value) = self.bindings.borrow().get(&name.lexeme) {
+            Ok(value.to_owned())
+        } else if let Some(parent) = &self.parent {
+            parent.get(name)
+        } else {
+            Err(Spanned {
+                value: LoxError::UndeclaredVar(format!("{name}")),
+                span: name.span
+            })
         }
-
-        Err(Spanned {
-            value: LoxError::UndeclaredVar(format!("{name}")),
-            span: name.span
-        })
     }
 }

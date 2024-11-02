@@ -1,9 +1,20 @@
 use std::fmt::Display;
 
-use crate::{ast::{LoxLiteral, Stmt}, environment::Env, errors::LoxError, interpreter::Interpreter, span::Spanned, tokens::Token};
+use crate::{
+    ast::{LoxLiteral, Stmt},
+    environment::Env,
+    errors::LoxError,
+    interpreter::Interpreter,
+    span::Spanned,
+    tokens::Token,
+};
 
 pub trait Call: Display {
-    fn call(&self, interpreter: &mut Interpreter, args: &[LoxLiteral]) -> Result<LoxLiteral, Spanned<LoxError>>;
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        args: &[LoxLiteral],
+    ) -> Result<LoxLiteral, Spanned<LoxError>>;
     fn arity(&self) -> usize;
 }
 
@@ -14,20 +25,25 @@ pub struct LoxFunction {
 }
 
 impl Call for LoxFunction {
-    fn call(&self, interpreter: &mut Interpreter, args: &[LoxLiteral]) -> Result<LoxLiteral, Spanned<LoxError>> {
-        let mut env = Env::new();
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        args: &[LoxLiteral],
+    ) -> Result<LoxLiteral, Spanned<LoxError>> {
+        let env = Env::new(interpreter.global.clone());
         for (param, arg) in self.params.iter().zip(args) {
             env.define(param, arg.clone())
         }
 
         // Catch any return statements that are bubbled up by throwing an error
         match interpreter.exec_block_with_env(&self.body, env) {
-            Err(Spanned { value: LoxError::Return(value), .. }) => {
-                Ok(value)
-            },
+            Err(Spanned {
+                value: LoxError::Return(value),
+                ..
+            }) => Ok(value),
 
             // Just pass through anything else
-            val => val
+            val => val,
         }
     }
 
@@ -57,7 +73,11 @@ pub mod globals {
             0
         }
 
-        fn call(&self, _interpreter: &mut Interpreter, _args: &[LoxLiteral]) -> Result<LoxLiteral, Spanned<LoxError>> {
+        fn call(
+            &self,
+            _interpreter: &mut Interpreter,
+            _args: &[LoxLiteral],
+        ) -> Result<LoxLiteral, Spanned<LoxError>> {
             use std::time::{SystemTime, UNIX_EPOCH};
 
             let epoch_millis = SystemTime::now()

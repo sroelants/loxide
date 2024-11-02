@@ -16,12 +16,27 @@ use crate::tokens::TokenType;
 type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
 pub struct Interpreter {
-    env: Env
+    pub global: Rc<Env>,
+    pub env: Rc<Env>
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { env: Env::new() }
+        let global = Rc::new(Env::global());
+
+        Self {
+            global: global.clone(),
+            env: global.clone(),
+        }
+    }
+
+    pub fn push_scope(&mut self) {
+        let new_scope =  Env::new(self.env.clone());
+        self.env = Rc::new(new_scope);
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.env = self.env.parent.clone().unwrap();
     }
 
     pub fn interpret(&mut self, ast: Ast) -> Result<Lit> {
@@ -39,7 +54,7 @@ impl Interpreter {
                 println!("{val}");
             }
 
-            Stmt::Return { keyword, expr } => {
+            Stmt::Return { expr, .. } => {
                 let value = if let Some(expr) = expr {
                     self.evaluate(expr)?
                 } else {
@@ -99,22 +114,22 @@ impl Interpreter {
     }
 
     fn exec_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
-        self.env.push_scope();
+        self.push_scope();
 
         for statement in statements.iter() {
             if let Err(err) = self.execute(statement) {
-                self.env.pop_scope();
+                self.pop_scope();
                 return Err(err);
             }
         }
 
-        self.env.pop_scope();
+        self.pop_scope();
         Ok(Lit::Nil)
     }
 
     // Additional helper that allows us to execute a block with a given environment.
     pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Env) -> Result<Lit> {
-        let prev_env = std::mem::replace(&mut self.env, env);
+        let prev_env = std::mem::replace(&mut self.env, Rc::new(env));
 
         for statement in statements.iter() {
             if let Err(err) = self.execute(statement) {
