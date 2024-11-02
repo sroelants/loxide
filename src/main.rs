@@ -3,7 +3,6 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use errors::RichError;
 use interpreter::Interpreter;
 use parser::Parser;
 use sourcemap::SourceMap;
@@ -130,7 +129,7 @@ impl Loxide {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;
-                let annotated = RichError::annotate(error, &sourcemap);
+                let annotated = sourcemap.annotate(error);
                 eprintln!("{}", annotated);
             }
         }

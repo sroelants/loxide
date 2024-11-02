@@ -6,13 +6,13 @@ use crate::ast::LoxLiteral as Lit;
 use crate::ast::Expr;
 use crate::ast::Stmt;
 use crate::environment::Env;
-use crate::errors::BaseError;
-use crate::errors::Stage;
+use crate::errors::LoxError;
 use crate::functions::LoxFunction;
+use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 
-type Result<T> = std::result::Result<T, BaseError>;
+type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
 pub struct Interpreter {
     env: Env
@@ -147,19 +147,17 @@ impl Interpreter {
 
         if let Lit::Callable(fun) = callee {
             if args.len() != fun.arity() {
-                return Err(BaseError {
-                    stage: Stage::Runtime,
-                    span: token.span, //TODO Wouldn't I rather store the function identifier/expression?
-                    msg: format!("expected {} arguments, but got {}", args.len(), fun.arity())
-                })
+                return Err(Spanned {
+                    value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                    span: token.span,
+                });
             }
 
             fun.call(self, &evaluated_args)
         } else {
-            Err(BaseError {
-                stage: Stage::Runtime,
-                span: token.span, //TODO Wouldn't I rather store the function identifier/expression?
-                msg: format!("Expression is not callable")
+            Err(Spanned {
+                value: LoxError::NotCallable,
+                span: token.span,
             })
         }
     }
@@ -213,10 +211,9 @@ impl Interpreter {
                 } else if let (Lit::Str(left), Lit::Str(right)) = (left, right) {
                     Ok(Lit::Str(format!("{left}{right}")))
                 } else {
-                    Err(BaseError {
-                        stage: Stage::Runtime,
+                    Err(Spanned {
+                        value: LoxError::MultiTypeError("string or number"),
                         span: op.span,
-                        msg: format!("operands must be string or number")
                     })
                 }
             }
@@ -285,7 +282,7 @@ fn assert_str(op: &Token, lit: Lit) -> Result<String> {
     if let Lit::Str(str) = lit {
        Ok(str)
     } else {
-        Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be string") })
+        Err(Spanned { value: LoxError::TypeError("string"), span: op.span })
     }
 }
 
@@ -293,7 +290,7 @@ fn assert_num(op: &Token, lit: Lit) -> Result<f64> {
     if let Lit::Num(num) = lit {
        Ok(num)
     } else {
-        Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be number") })
+        Err(Spanned { value: LoxError::TypeError("number"), span: op.span })
     }
 }
 
@@ -301,6 +298,6 @@ fn assert_bool(op: &Token, lit: Lit) -> Result<bool> {
     if let Lit::Bool(boolean) = lit {
        Ok(boolean)
     } else {
-       Err(BaseError { stage: Stage::Runtime, span: op.span, msg: format!("operand must be boolean") })
+        Err(Spanned { value: LoxError::TypeError("bool"), span: op.span })
     }
 }
