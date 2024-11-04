@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::Ast;
@@ -12,17 +13,21 @@ use crate::span::Span;
 use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
+use crate::util::RefEq;
 
 type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
-pub struct Interpreter {
-    pub env: Rc<Env>
+pub struct Interpreter<'a> {
+    pub env: Rc<Env>,
+    locals: HashMap<RefEq<'a, Expr>, usize>,
+
 }
 
-impl Interpreter {
+impl<'a> Interpreter<'a> {
     pub fn new() -> Self {
         Self {
             env: Rc::new(Env::global()),
+            locals: HashMap::new(),
         }
     }
 
@@ -33,6 +38,10 @@ impl Interpreter {
 
     pub fn pop_scope(&mut self) {
         self.env = self.env.parent.clone().unwrap();
+    }
+
+    pub fn resolve(&mut self, expr: &'a Expr, depth: usize) {
+        self.locals.insert(RefEq(expr), depth);
     }
 
     pub fn interpret(&mut self, ast: Ast) -> Result<Lit> {
