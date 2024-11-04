@@ -22,6 +22,9 @@ pub mod environment;
 pub mod errors;
 pub mod sourcemap;
 pub mod functions;
+pub mod resolver;
+pub mod util;
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
