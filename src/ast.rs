@@ -33,9 +33,15 @@ impl PartialEq for LoxLiteral {
             return left == right;
         }
 
+        if let (Self::Callable(left), Self::Callable(right)) = (&self, &other) {
+            return std::ptr::eq(left, right);
+        }
+
         false
     }
 }
+
+impl Eq for LoxLiteral {}
 
 impl LoxLiteral {
     pub fn is_bool(&self) -> bool {
@@ -81,7 +87,7 @@ impl<> Display for LoxLiteral {
 
 pub type Ast = Vec<Stmt>;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Expr {
     Grouping {
         expr: Box<Expr>,
