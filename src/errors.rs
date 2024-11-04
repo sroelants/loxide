@@ -28,6 +28,9 @@ pub enum LoxError {
     ExpectedVarName,
     ExpectedExpression,
 
+    // Resolution errors
+    RecursiveVarDecl,
+
     // Runtime errors
     ArityMismatch(usize, usize),
     NotCallable,
@@ -60,6 +63,8 @@ impl Display for LoxError {
             LoxError::InvalidAssigTarget => write!(f, "Invalid assignment target"),
             LoxError::ExpectedVarName => write!(f, "Expected variable name"),
             LoxError::ExpectedExpression => write!(f, "Expected expression"),
+
+            LoxError::RecursiveVarDecl => write!(f, "Can't read local variable in its own initializer"),
 
             LoxError::ArityMismatch(expected, found) => write!(f, "Expected {expected} arguments, but found {found}"),
             LoxError::NotCallable => write!(f, "Expression is not callable"),
