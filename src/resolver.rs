@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use crate::{ast::{Expr, Stmt}, errors::LoxError, interpreter::Interpreter, span::Spanned, tokens::Token};
 
 pub struct Resolver<'a> {
-    interpreter: Interpreter<'a>,
+    interpreter: &'a mut Interpreter<'a>,
     scopes: Vec<HashMap<String, bool>>,
     errors: Vec<Spanned<LoxError>>
 }
 
 impl<'a> Resolver<'a> {
-    pub fn new(interpreter: Interpreter<'a>) -> Self {
+    pub fn new(interpreter: &'a mut Interpreter<'a>) -> Self {
         Self {
             interpreter,
             scopes: Vec::new(),
@@ -17,7 +17,7 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub fn resolve_stmt(&mut self, stmt: &Stmt) {
+    pub fn resolve_stmt(&mut self, stmt: &'a Stmt) {
         match stmt {
             Stmt::Block { statements } => {
                 self.push_scope();
@@ -68,8 +68,6 @@ impl<'a> Resolver<'a> {
                 self.resolve_expr(condition);
                 self.resolve_stmt(body);
             }
-
-            _ => todo!()
         }
     }
 
@@ -93,13 +91,13 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_many(&mut self, statements: &[Stmt]) {
+    fn resolve_many(&mut self, statements: &'a [Stmt]) {
         for statement in statements {
             self.resolve_stmt(statement);
         }
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) {
+    fn resolve_expr(&mut self, expr: &'a Expr) {
         match expr {
             Expr::Variable { name } => {
                 if let Some(scope) = self.scopes.last() {
@@ -146,12 +144,10 @@ impl<'a> Resolver<'a> {
             Expr::Unary { right, .. } => {
                 self.resolve_expr(right);
             },
-
-            _ => todo!()
         }
     }
 
-    fn resolve_fun(&mut self, name: &Token, params: &[Token], body: &[Stmt]) {
+    fn resolve_fun(&mut self, _name: &Token, params: &[Token], body: &'a [Stmt]) {
         self.push_scope();
 
         for param in params {
@@ -164,10 +160,10 @@ impl<'a> Resolver<'a> {
         self.pop_scope();
     }
 
-    pub fn resolve_local(&mut self, expr: &Expr, name: &Token) {
+    pub fn resolve_local(&mut self, expr: &'a Expr, name: &Token) {
         for (i, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&name.lexeme) {
-                // TODO: intepreter.resolve(expr, i);
+                self.interpreter.resolve(expr, i);
                 break;
             }
         }

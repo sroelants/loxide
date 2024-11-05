@@ -19,14 +19,18 @@ type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
 pub struct Interpreter<'a> {
     pub env: Rc<Env>,
+    globals: Rc<Env>,
     locals: HashMap<RefEq<'a, Expr>, usize>,
 
 }
 
 impl<'a> Interpreter<'a> {
     pub fn new() -> Self {
+        let globals = Rc::new(Env::global());
+
         Self {
-            env: Rc::new(Env::global()),
+            env: globals.clone(),
+            globals,
             locals: HashMap::new(),
         }
     }
@@ -162,13 +166,30 @@ impl<'a> Interpreter<'a> {
 
             Expr::Logical { op, left, right } => self.eval_logical(op, left, right),
 
-            Expr::Variable { name } => self.env.get(name),
+            Expr::Variable { name } => { self.lookup(name, expr)},
 
             Expr::Assignment { name, value } => {
                 let value = self.evaluate(value)?;
-                self.env.assign(name, value.clone())?;
+
+                if let Some(distance) = self.locals.get(&RefEq(expr)) {
+                    self.env.assign_at(*distance, name, value.clone())?;
+                } else {
+                    self.globals.assign(name, value.clone())?;
+                }
+
                 Ok(value)
             }
+        }
+    }
+
+    fn lookup(&self, name: &Token, expr: &Expr) -> Result<Lit> {
+        if let Some(&dist) = self.locals.get(&RefEq(expr)) {
+            self.env.get_at(dist, name)
+        } else {
+            Err(Spanned {
+                span: name.span,
+                value: LoxError::UndeclaredVar(name.lexeme.to_owned()),
+            })
         }
     }
 

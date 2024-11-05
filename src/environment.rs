@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -38,7 +39,7 @@ impl Env {
     }
 
     pub fn assign(&self, name: &Token, value: LoxLiteral) -> Result<(), Spanned<LoxError>> {
-        if self.bindings.borrow().contains_key(&name.lexeme) {
+        if RefCell::borrow(&self.bindings).contains_key(&name.lexeme) {
             self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
             Ok(())
         } else if let Some(parent) = &self.parent {
@@ -52,7 +53,7 @@ impl Env {
     }
 
     pub fn get(&self, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
-        if let Some(value) = self.bindings.borrow().get(&name.lexeme) {
+        if let Some(value) = RefCell::borrow(&self.bindings).get(&name.lexeme) {
             Ok(value.to_owned())
         } else if let Some(parent) = &self.parent {
             parent.get(name)
@@ -62,5 +63,30 @@ impl Env {
                 span: name.span
             })
         }
+    }
+
+    pub fn get_at(&self, dist: usize, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
+        let mut env = self;
+
+        for _ in 0..dist {
+            env = env.parent.as_ref().unwrap().borrow();
+        }
+
+        env.get(name)
+    }
+
+    pub fn assign_at(
+        &self,
+        dist: usize,
+        name: &Token,
+        value: LoxLiteral
+    ) -> Result<(), Spanned<LoxError>> {
+        let mut env = self;
+
+        for _ in 0..dist {
+            env = env.parent.as_ref().unwrap().borrow();
+        }
+
+        env.assign(name, value)
     }
 }
