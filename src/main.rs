@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use interpreter::Interpreter;
 use parser::Parser;
+use resolver::Resolver;
 use sourcemap::SourceMap;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
@@ -124,11 +125,14 @@ impl Loxide {
             }
         };
 
+        // Variable resolution
+        let mut resolver = Resolver::new();
+        resolver.resolve_ast(&ast);
+
         // Interpreting
+        let mut interpreter = Interpreter::new(resolver.locals);
 
-        let mut intepreter = Interpreter::new();
-
-        match intepreter.interpret(ast) {
+        match interpreter.interpret(&ast) {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;

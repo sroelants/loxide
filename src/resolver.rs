@@ -1,19 +1,26 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Expr, Stmt}, errors::LoxError, interpreter::Interpreter, span::Spanned, tokens::Token};
+use crate::{ast::{Expr, Stmt}, errors::LoxError, span::Spanned, tokens::Token, util::RefEq};
 
 pub struct Resolver<'a> {
-    interpreter: &'a mut Interpreter<'a>,
     scopes: Vec<HashMap<String, bool>>,
-    errors: Vec<Spanned<LoxError>>
+    errors: Vec<Spanned<LoxError>>,
+    pub locals: HashMap<RefEq<'a, Expr>, usize>,
+
 }
 
 impl<'a> Resolver<'a> {
-    pub fn new(interpreter: &'a mut Interpreter<'a>) -> Self {
+    pub fn new() -> Self {
         Self {
-            interpreter,
             scopes: Vec::new(),
             errors: Vec::new(),
+            locals: HashMap::new(),
+        }
+    }
+
+    pub fn resolve_ast(&mut self, ast: &'a [Stmt]) {
+        for statement in ast {
+            self.resolve_stmt(statement);
         }
     }
 
@@ -163,7 +170,7 @@ impl<'a> Resolver<'a> {
     pub fn resolve_local(&mut self, expr: &'a Expr, name: &Token) {
         for (i, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&name.lexeme) {
-                self.interpreter.resolve(expr, i);
+                self.locals.insert(RefEq(expr), i);
                 break;
             }
         }

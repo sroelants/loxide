@@ -25,13 +25,13 @@ pub struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new() -> Self {
+    pub fn new(locals: HashMap<RefEq<'a, Expr>, usize>) -> Self {
         let globals = Rc::new(Env::global());
 
         Self {
             env: globals.clone(),
             globals,
-            locals: HashMap::new(),
+            locals,
         }
     }
 
@@ -48,7 +48,7 @@ impl<'a> Interpreter<'a> {
         self.locals.insert(RefEq(expr), depth);
     }
 
-    pub fn interpret(&mut self, ast: Ast) -> Result<Lit> {
+    pub fn interpret(&mut self, ast: &Ast) -> Result<Lit> {
         for statement in ast.iter() {
             self.execute(statement)?;
         }
