@@ -1,8 +1,9 @@
 use crate::functions::Call;
 use crate::tokens::Token;
 use std::{fmt::Display, rc::Rc};
+use std::hash::Hash;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum LoxLiteral {
     Bool(bool),
     Num(f64),
@@ -34,7 +35,7 @@ impl PartialEq for LoxLiteral {
         }
 
         if let (Self::Callable(left), Self::Callable(right)) = (&self, &other) {
-            return std::ptr::eq(left, right);
+            return Rc::ptr_eq(left, right);
         }
 
         false
@@ -42,6 +43,12 @@ impl PartialEq for LoxLiteral {
 }
 
 impl Eq for LoxLiteral {}
+
+impl Hash for LoxLiteral {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+       core::mem::discriminant(self).hash(state)
+    }
+}
 
 impl LoxLiteral {
     pub fn is_bool(&self) -> bool {
@@ -73,7 +80,7 @@ impl LoxLiteral {
     }
 }
 
-impl<> Display for LoxLiteral {
+impl Display for LoxLiteral {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LoxLiteral::Nil => write!(f, "nil"),
@@ -87,7 +94,7 @@ impl<> Display for LoxLiteral {
 
 pub type Ast = Vec<Stmt>;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expr {
     Grouping {
         expr: Box<Expr>,
@@ -123,7 +130,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Block {
         statements: Vec<Stmt>,

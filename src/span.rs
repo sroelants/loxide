@@ -13,7 +13,7 @@ pub struct Annotated<'a, T> {
     pub source: &'a str
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Span {
     pub offset: usize,
     pub len: usize,

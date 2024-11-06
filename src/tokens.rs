@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::span::Span;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TokenType {
     // Single character tokens
     LeftParen,
@@ -54,7 +54,7 @@ pub enum TokenType {
 }
 
 // TODO: Make this zero-copy by not storing the lexeme on the token.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Token {
     pub token_type: TokenType,
     pub span: Span,

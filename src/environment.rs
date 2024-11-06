@@ -11,6 +11,7 @@ use crate::ast::LoxLiteral;
 
 type Bindings = HashMap<String, LoxLiteral>;
 
+#[derive(Debug)]
 pub struct Env {
     pub parent: Option<Rc<Env>>,
     pub bindings: Rc<RefCell<Bindings>>,

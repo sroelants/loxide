@@ -1,4 +1,5 @@
 use std::{fmt::Display, rc::Rc};
+use std::fmt::Debug;
 
 use crate::{
     ast::{LoxLiteral, Stmt},
@@ -9,7 +10,7 @@ use crate::{
     tokens::Token,
 };
 
-pub trait Call: Display {
+pub trait Call: Display + Debug {
     fn call(
         &self,
         interpreter: &mut Interpreter,
@@ -61,9 +62,16 @@ impl Display for LoxFunction {
     }
 }
 
+impl Debug for LoxFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoxFunction").field("name", &self.name).field("params", &self.params).field("body", &self.body).finish()
+    }
+}
+
 // Globals
 pub mod globals {
     use std::fmt::Display;
+    use std::fmt::Debug;
 
     use crate::{ast::LoxLiteral, errors::LoxError, interpreter::Interpreter, span::Spanned};
 
@@ -95,6 +103,12 @@ pub mod globals {
     impl Display for Clock {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "<native fn: clock>")
+        }
+    }
+
+    impl Debug for Clock {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Clock").finish()
         }
     }
 }

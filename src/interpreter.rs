@@ -13,19 +13,18 @@ use crate::span::Span;
 use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
-use crate::util::RefEq;
 
 type Result<T> = std::result::Result<T, Spanned<LoxError>>;
 
 pub struct Interpreter<'a> {
     pub env: Rc<Env>,
     globals: Rc<Env>,
-    locals: HashMap<RefEq<'a, Expr>, usize>,
+    locals: HashMap<&'a Expr, usize>,
 
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(locals: HashMap<RefEq<'a, Expr>, usize>) -> Self {
+    pub fn new(locals: HashMap<&'a Expr, usize>) -> Self {
         let globals = Rc::new(Env::global());
 
         Self {
@@ -45,7 +44,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn resolve(&mut self, expr: &'a Expr, depth: usize) {
-        self.locals.insert(RefEq(expr), depth);
+        self.locals.insert(expr, depth);
     }
 
     pub fn interpret(&mut self, ast: &Ast) -> Result<Lit> {
@@ -171,7 +170,7 @@ impl<'a> Interpreter<'a> {
             Expr::Assignment { name, value } => {
                 let value = self.evaluate(value)?;
 
-                if let Some(distance) = self.locals.get(&RefEq(expr)) {
+                if let Some(distance) = self.locals.get(expr) {
                     self.env.assign_at(*distance, name, value.clone())?;
                 } else {
                     self.globals.assign(name, value.clone())?;
@@ -183,13 +182,11 @@ impl<'a> Interpreter<'a> {
     }
 
     fn lookup(&self, name: &Token, expr: &Expr) -> Result<Lit> {
-        if let Some(&dist) = self.locals.get(&RefEq(expr)) {
+
+        if let Some(&dist) = self.locals.get(expr) {
             self.env.get_at(dist, name)
         } else {
-            Err(Spanned {
-                span: name.span,
-                value: LoxError::UndeclaredVar(name.lexeme.to_owned()),
-            })
+            self.globals.get(name)
         }
     }
 
