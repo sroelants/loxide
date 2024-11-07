@@ -27,6 +27,7 @@ pub enum LoxError {
     InvalidAssigTarget,
     ExpectedVarName,
     ExpectedExpression,
+    ExpectedClassName,
 
     // Resolution errors
     RecursiveVarDecl,
@@ -63,6 +64,7 @@ impl Display for LoxError {
             LoxError::InvalidAssigTarget => write!(f, "Invalid assignment target"),
             LoxError::ExpectedVarName => write!(f, "Expected variable name"),
             LoxError::ExpectedExpression => write!(f, "Expected expression"),
+            LoxError::ExpectedClassName => write!(f, "Expected class name"),
 
             LoxError::RecursiveVarDecl => write!(f, "Can't read local variable in its own initializer"),
 
