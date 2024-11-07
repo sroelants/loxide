@@ -175,7 +175,7 @@ impl Parser {
             methods.push(self.function("method")?);
         }
 
-        self.expect(RightBrace, LoxError::ExpectedRightBrace("after class body"));
+        self.expect(RightBrace, LoxError::ExpectedRightBrace("after class body"))?;
 
         Ok(Stmt::Class { name, methods })
     }

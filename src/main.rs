@@ -25,6 +25,7 @@ pub mod sourcemap;
 pub mod functions;
 pub mod resolver;
 pub mod util;
+pub mod class;
 
 
 fn main() {

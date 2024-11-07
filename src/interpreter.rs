@@ -6,6 +6,7 @@ use crate::ast::Ast;
 use crate::ast::LoxLiteral as Lit;
 use crate::ast::Expr;
 use crate::ast::Stmt;
+use crate::class::Class;
 use crate::environment::Env;
 use crate::errors::LoxError;
 use crate::functions::LoxFunction;
@@ -117,6 +118,12 @@ impl<'a> Interpreter<'a> {
 
                 self.env.define(name, Lit::Callable(Rc::new(function)));
             },
+
+            Stmt::Class { name, .. } => {
+                self.env.define(name, Lit::Nil);
+                let class = Class { name: name.clone() };
+                self.env.assign(name, Lit::Callable(Rc::new(class)))?;
+            }
         };
 
         Ok(Lit::Nil)
