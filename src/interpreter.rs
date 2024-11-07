@@ -184,6 +184,21 @@ impl<'a> Interpreter<'a> {
                 }
 
                 Ok(value)
+            },
+
+            Expr::Get { name, object } => {
+                let object = self.evaluate(object)?;
+
+                if let Lit::Instance(instance) = object {
+                    // Ok(instance.get(name))
+                    todo!()
+                } else {
+                    Err(Spanned {
+                        value: LoxError::IllegalPropertyAccess,
+                        span: name.span
+                    })
+
+                }
             }
         }
     }

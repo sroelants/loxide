@@ -102,6 +102,10 @@ pub enum Expr {
     Grouping {
         expr: Box<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Binary {
         op: Token,
         left: Box<Expr>,
@@ -109,7 +113,7 @@ pub enum Expr {
     },
     Variable {
         name: Token,
- },
+    },
     Assignment {
         name: Token,
         value: Box<Expr>,

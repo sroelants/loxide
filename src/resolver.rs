@@ -153,6 +153,10 @@ impl<'a> Resolver<'a> {
             Expr::Unary { right, .. } => {
                 self.resolve_expr(right);
             },
+
+            Expr::Get { object, .. } => {
+                self.resolve_expr(object);
+            }
         }
     }
 

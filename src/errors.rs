@@ -28,6 +28,7 @@ pub enum LoxError {
     ExpectedVarName,
     ExpectedExpression,
     ExpectedClassName,
+    ExpectedPropertyName(&'static str),
 
     // Resolution errors
     RecursiveVarDecl,
@@ -38,6 +39,8 @@ pub enum LoxError {
     TypeError(&'static str),
     MultiTypeError(&'static str),
     UndeclaredVar(String),
+    IllegalPropertyAccess,
+    UndefinedProperty(String),
 
     // Not actual errors
     Return(LoxLiteral),
@@ -65,6 +68,7 @@ impl Display for LoxError {
             LoxError::ExpectedVarName => write!(f, "Expected variable name"),
             LoxError::ExpectedExpression => write!(f, "Expected expression"),
             LoxError::ExpectedClassName => write!(f, "Expected class name"),
+            LoxError::ExpectedPropertyName(ctx) => write!(f, "Expected property name {ctx}"),
 
             LoxError::RecursiveVarDecl => write!(f, "Can't read local variable in its own initializer"),
 
@@ -73,6 +77,8 @@ impl Display for LoxError {
             LoxError::TypeError(ctx) => write!(f, "Operand must be {ctx}"),
             LoxError::MultiTypeError(ctx) => write!(f, "Operands must both be {ctx}"),
             LoxError::UndeclaredVar(name) => write!(f, "Undeclared variable '{name}'"),
+            LoxError::IllegalPropertyAccess => write!(f, "Only class instances have properties"),
+            LoxError::UndefinedProperty(name) => write!(f, "Undefined property '{name}'"),
 
             // Not an actual error, should never make it to the error reporting
             // stage

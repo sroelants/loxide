@@ -453,6 +453,9 @@ impl Parser {
         loop {
             if let Some(_) = self.matches(LeftParen) {
                 expr = self.finish_call(expr)?;
+            } if let Some(_) = self.matches(Dot) {
+                let name = self.expect(Identifier, LoxError::ExpectedPropertyName("after ."))?;
+                expr = Expr::Get { name, object: Box::new(expr) }
             } else {
                 break;
             }

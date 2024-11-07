@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Display;
 use crate::ast::LoxLiteral;
 use crate::span::Spanned;
@@ -23,7 +24,11 @@ impl Call for Class {
         _interpreter: &mut Interpreter,
         _args: &[LoxLiteral],
     ) -> Result<LoxLiteral, Spanned<LoxError>> {
-        let instance = Instance { class: self.clone() };
+        let instance = Instance {
+            class: self.clone(),
+            fields: HashMap::new(),
+        };
+
         Ok(LoxLiteral::Instance(instance))
     }
 
@@ -39,6 +44,20 @@ impl Call for Class {
 #[derive(Debug, Clone)]
 pub struct Instance {
     class: Class,
+    fields: HashMap<String, LoxLiteral>
+}
+
+impl Instance {
+    pub fn get(&self, name: &Token) -> Result<&LoxLiteral, Spanned<LoxError>> {
+        if let Some(value) = self.fields.get(&name.lexeme) {
+            Ok(value)
+        } else {
+            Err(Spanned {
+                value: LoxError::UndefinedProperty(name.lexeme.clone()),
+                span: name.span
+            })
+        }
+    }
 }
 
 impl Display for Instance {
