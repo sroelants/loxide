@@ -72,6 +72,10 @@ impl<'a> Resolver<'a> {
             Stmt::While { condition, body } => {
                 self.resolve_expr(condition);
                 self.resolve_stmt(body);
+            },
+
+            Stmt::Class { name, .. } => {
+                self.resolve_class(name);
             }
         }
     }
@@ -163,6 +167,11 @@ impl<'a> Resolver<'a> {
         self.resolve_many(body);
 
         self.pop_scope();
+    }
+
+    fn resolve_class(&mut self, name: &Token) {
+        self.declare(name);
+        self.define(name);
     }
 
     pub fn resolve_local(&mut self, expr: &'a Expr, name: &Token) {
