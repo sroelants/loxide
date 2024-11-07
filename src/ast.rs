@@ -1,3 +1,4 @@
+use crate::class::Instance;
 use crate::functions::Call;
 use crate::tokens::Token;
 use std::{fmt::Display, rc::Rc};
@@ -9,6 +10,7 @@ pub enum LoxLiteral {
     Num(f64),
     Str(String),
     Callable(Rc<dyn Call>),
+    Instance(Instance),
     Nil,
 }
 
@@ -88,6 +90,7 @@ impl Display for LoxLiteral {
             LoxLiteral::Bool(val) => write!(f, "{val}"),
             LoxLiteral::Str(val) => write!(f, "{val}"),
             LoxLiteral::Callable(val) => write!(f, "{val}"),
+            LoxLiteral::Instance(instance) => write!(f, "{instance}"),
         }
     }
 }
