@@ -145,6 +145,8 @@ impl Parser {
 
         if let Some(keyword) = self.matches(Return) {
             self.return_statement(keyword)
+        } else if let Some(_) = self.matches(Class) {
+            self.class()
         } else if let Some(_) = self.matches(Fun) {
             self.function("function")
         } else if let Some(_) = self.matches(If) {
@@ -160,6 +162,22 @@ impl Parser {
         } else {
             self.expression_statement()
         }
+    }
+
+    pub fn class(&mut self) -> ParseResult<Stmt> {
+        use TokenType::*;
+        let name = self.expect(Identifier, LoxError::ExpectedClassName)?;
+        self.expect(LeftBrace, LoxError::ExpectedLeftBrace("before class body"))?;
+
+        let mut methods = Vec::new();
+
+        while !self.check(RightBrace) && !self.finished() {
+            methods.push(self.function("method")?);
+        }
+
+        self.expect(RightBrace, LoxError::ExpectedRightBrace("after class body"));
+
+        Ok(Stmt::Class { name, methods })
     }
 
     pub fn return_statement(&mut self, keyword: Token) -> ParseResult<Stmt> {
