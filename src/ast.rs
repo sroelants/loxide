@@ -163,5 +163,9 @@ pub enum Stmt {
     Return {
         keyword: Token,
         expr: Option<Expr>,
+    },
+    Class {
+        name: Token,
+        methods: Vec<Stmt>,
     }
 }
