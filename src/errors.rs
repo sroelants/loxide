@@ -40,6 +40,7 @@ pub enum LoxError {
     MultiTypeError(&'static str),
     UndeclaredVar(String),
     IllegalPropertyAccess,
+    IllegalFieldAccess,
     UndefinedProperty(String),
 
     // Not actual errors
@@ -78,6 +79,7 @@ impl Display for LoxError {
             LoxError::MultiTypeError(ctx) => write!(f, "Operands must both be {ctx}"),
             LoxError::UndeclaredVar(name) => write!(f, "Undeclared variable '{name}'"),
             LoxError::IllegalPropertyAccess => write!(f, "Only class instances have properties"),
+            LoxError::IllegalFieldAccess => write!(f, "Only class instances have fields"),
             LoxError::UndefinedProperty(name) => write!(f, "Undefined property '{name}'"),
 
             // Not an actual error, should never make it to the error reporting

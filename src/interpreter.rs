@@ -119,9 +119,25 @@ impl<'a> Interpreter<'a> {
                 self.env.define(name, Lit::Callable(Rc::new(function)));
             },
 
-            Stmt::Class { name, .. } => {
+            Stmt::Class { name, methods } => {
                 self.env.define(name, Lit::Nil);
-                let class = Class { name: name.clone() };
+
+                let mut methods_map: HashMap<String, LoxFunction> = HashMap::new();
+
+                for method in methods {
+                    let Stmt::Fun { name, params, body } = method else { panic!() };
+
+                    let function = LoxFunction {
+                        name: name.clone(),
+                        params: params.clone(),
+                        body: body.clone(),
+                        env: self.env.clone(),
+                    };
+
+                    methods_map.insert(name.lexeme.clone(), function);
+                }
+
+                let class = Class { name: name.clone(), methods: methods_map };
                 self.env.assign(name, Lit::Callable(Rc::new(class)))?;
             }
         };
@@ -190,8 +206,7 @@ impl<'a> Interpreter<'a> {
                 let object = self.evaluate(object)?;
 
                 if let Lit::Instance(instance) = object {
-                    // Ok(instance.get(name))
-                    todo!()
+                    instance.get(name)
                 } else {
                     Err(Spanned {
                         value: LoxError::IllegalPropertyAccess,
@@ -199,7 +214,22 @@ impl<'a> Interpreter<'a> {
                     })
 
                 }
-            }
+            },
+
+            Expr::Set { name, value, object } => {
+                let object = self.evaluate(object)?;
+
+                if let Lit::Instance(mut instance) = object {
+                    let value = self.evaluate(value)?;
+                    instance.set(name, value.clone());
+                    Ok(value)
+                } else {
+                    Err(Spanned {
+                        value: LoxError::IllegalFieldAccess,
+                        span: name.span,
+                    })
+                }
+            },
         }
     }
 

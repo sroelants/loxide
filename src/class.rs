@@ -1,6 +1,9 @@
+
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::rc::Rc;
 use crate::ast::LoxLiteral;
+use crate::functions::LoxFunction;
 use crate::span::Spanned;
 use crate::errors::LoxError;
 use crate::interpreter::Interpreter;
@@ -10,6 +13,7 @@ use crate::{functions::Call, tokens::Token};
 #[derive(Debug, Clone)]
 pub struct Class {
     pub name: Token,
+    pub methods: HashMap<String, LoxFunction>
 }
 
 impl Display for Class {
@@ -48,15 +52,21 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn get(&self, name: &Token) -> Result<&LoxLiteral, Spanned<LoxError>> {
+    pub fn get(&self, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
         if let Some(value) = self.fields.get(&name.lexeme) {
-            Ok(value)
+            Ok(value.to_owned())
+        } else if let Some(method) = self.class.methods.get(&name.lexeme) {
+            Ok(LoxLiteral::Callable(Rc::new(method.to_owned())))
         } else {
             Err(Spanned {
                 value: LoxError::UndefinedProperty(name.lexeme.clone()),
                 span: name.span
             })
         }
+    }
+
+    pub fn set(&mut self, name: &Token, value: LoxLiteral) {
+        self.fields.insert(name.lexeme.clone(), value);
     }
 }
 

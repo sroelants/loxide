@@ -20,6 +20,7 @@ pub trait Call: Display + Debug {
     fn arity(&self) -> usize;
 }
 
+#[derive(Clone)]
 pub struct LoxFunction {
     pub name: Token,
     pub params: Vec<Token>,

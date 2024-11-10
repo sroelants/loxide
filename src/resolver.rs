@@ -9,6 +9,12 @@ pub struct Resolver<'a> {
 
 }
 
+enum FunctionType {
+    None,
+    Function,
+    Method,
+}
+
 impl<'a> Resolver<'a> {
     pub fn new() -> Self {
         Self {
@@ -44,7 +50,7 @@ impl<'a> Resolver<'a> {
                 self.declare(name);
                 self.define(name);
 
-                self.resolve_fun(name, params, body);
+                self.resolve_fun(FunctionType::Function, name, params, body);
             },
 
             Stmt::Expression { expr } => {
@@ -74,8 +80,14 @@ impl<'a> Resolver<'a> {
                 self.resolve_stmt(body);
             },
 
-            Stmt::Class { name, .. } => {
+            Stmt::Class { name, methods } => {
                 self.resolve_class(name);
+
+                for method in methods {
+                    if let Stmt::Fun { name, params, body } = method {
+                        self.resolve_fun(FunctionType::Method, name, params, body);
+                    }
+                }
             }
         }
     }
@@ -156,11 +168,15 @@ impl<'a> Resolver<'a> {
 
             Expr::Get { object, .. } => {
                 self.resolve_expr(object);
+            },
+            Expr::Set { value, object, .. } => {
+                self.resolve_expr(value);
+                self.resolve_expr(object);
             }
         }
     }
 
-    fn resolve_fun(&mut self, _name: &Token, params: &[Token], body: &'a [Stmt]) {
+    fn resolve_fun(&mut self, _fun_type: FunctionType, _name: &Token, params: &[Token], body: &'a [Stmt]) {
         self.push_scope();
 
         for param in params {

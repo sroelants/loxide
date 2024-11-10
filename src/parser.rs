@@ -349,6 +349,8 @@ impl Parser {
 
             if let Expr::Variable { name } = expr {
                 return Ok(Expr::Assignment { name, value: Box::new(value) });
+            } else if let Expr::Get { name, object } = expr {
+                return Ok(Expr::Set { name, object, value: Box::new(value) });
             }
 
             return Err(self.error(LoxError::InvalidAssigTarget));

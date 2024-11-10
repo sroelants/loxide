@@ -9,3 +9,11 @@ print DevonshireCream;
 class Bagel {}
 var bagel = Bagel();
 print bagel;
+
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+
+Bacon().eat(); // Prints "Crunch crunch crunch!".
