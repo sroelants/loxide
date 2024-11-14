@@ -1,20 +1,22 @@
-use crate::class::Instance;
-use crate::functions::Call;
+use crate::class::{Class, Instance};
+use crate::functions::{Call, LoxFunction};
 use crate::tokens::Token;
-use std::{fmt::Display, rc::Rc};
 use std::hash::Hash;
+use std::{fmt::Display, rc::Rc};
 
 #[derive(Debug, Clone)]
-pub enum LoxLiteral {
+pub enum LoxValue {
     Bool(bool),
     Num(f64),
-    Str(String),
-    Callable(Rc<dyn Call>),
-    Instance(Instance),
+    Str(Rc<String>),
     Nil,
+    NativeFunction(Rc<dyn Call>),
+    Function(Rc<LoxFunction>),
+    Class(Rc<Class>),
+    Instance(Instance),
 }
 
-impl PartialEq for LoxLiteral {
+impl PartialEq for LoxValue {
     fn eq(&self, other: &Self) -> bool {
         if self.is_nil() && other.is_nil() {
             return true;
@@ -36,7 +38,15 @@ impl PartialEq for LoxLiteral {
             return left == right;
         }
 
-        if let (Self::Callable(left), Self::Callable(right)) = (&self, &other) {
+        if let (Self::Function(left), Self::Function(right)) = (&self, &other) {
+            return Rc::ptr_eq(left, right);
+        }
+
+        if let (Self::NativeFunction(left), Self::NativeFunction(right)) = (&self, &other) {
+            return Rc::ptr_eq(left, right);
+        }
+
+        if let (Self::Class(left), Self::Class(right)) = (&self, &other) {
             return Rc::ptr_eq(left, right);
         }
 
@@ -44,15 +54,15 @@ impl PartialEq for LoxLiteral {
     }
 }
 
-impl Eq for LoxLiteral {}
+impl Eq for LoxValue {}
 
-impl Hash for LoxLiteral {
+impl Hash for LoxValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-       core::mem::discriminant(self).hash(state)
+        core::mem::discriminant(self).hash(state)
     }
 }
 
-impl LoxLiteral {
+impl LoxValue {
     pub fn is_bool(&self) -> bool {
         match self {
             Self::Bool(_) => true,
@@ -82,15 +92,17 @@ impl LoxLiteral {
     }
 }
 
-impl Display for LoxLiteral {
+impl Display for LoxValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoxLiteral::Nil => write!(f, "nil"),
-            LoxLiteral::Num(val) => write!(f, "{val}"),
-            LoxLiteral::Bool(val) => write!(f, "{val}"),
-            LoxLiteral::Str(val) => write!(f, "{val}"),
-            LoxLiteral::Callable(val) => write!(f, "{val}"),
-            LoxLiteral::Instance(instance) => write!(f, "{instance}"),
+            LoxValue::Nil => write!(f, "nil"),
+            LoxValue::Num(val) => write!(f, "{val}"),
+            LoxValue::Bool(val) => write!(f, "{val}"),
+            LoxValue::Str(val) => write!(f, "{val}"),
+            LoxValue::Function(val) => write!(f, "{val}"),
+            LoxValue::NativeFunction(val) => write!(f, "{val}"),
+            LoxValue::Class(val) => write!(f, "{val}"),
+            LoxValue::Instance(instance) => write!(f, "{}", instance),
         }
     }
 }
@@ -118,10 +130,18 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Set {
+        name: Token,
+        object: Box<Expr>,
+        value: Box<Expr>,
+    },
     Logical {
         op: Token,
         left: Box<Expr>,
         right: Box<Expr>,
+    },
+    This {
+        keyword: Token,
     },
     Unary {
         op: Token,
@@ -130,10 +150,10 @@ pub enum Expr {
     Call {
         callee: Box<Expr>,
         paren: Token,
-        arguments: Vec<Expr>
+        arguments: Vec<Expr>,
     },
     Literal {
-        value: LoxLiteral,
+        value: LoxValue,
     },
 }
 
@@ -149,7 +169,6 @@ pub enum Stmt {
         condition: Expr,
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
-
     },
     While {
         condition: Expr,
@@ -174,5 +193,5 @@ pub enum Stmt {
     Class {
         name: Token,
         methods: Vec<Stmt>,
-    }
+    },
 }

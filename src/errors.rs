@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::ast::LoxLiteral;
+use crate::ast::LoxValue;
 use crate::colors::{RED, NORMAL};
 
 use crate::span::Annotated;
@@ -44,7 +44,7 @@ pub enum LoxError {
     UndefinedProperty(String),
 
     // Not actual errors
-    Return(LoxLiteral),
+    Return(LoxValue),
 }
 
 impl Display for LoxError {

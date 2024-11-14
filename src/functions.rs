@@ -1,8 +1,9 @@
 use std::{fmt::Display, rc::Rc};
 use std::fmt::Debug;
 
+use crate::class::Instance;
 use crate::{
-    ast::{LoxLiteral, Stmt},
+    ast::{LoxValue, Stmt},
     environment::Env,
     errors::LoxError,
     interpreter::Interpreter,
@@ -14,8 +15,8 @@ pub trait Call: Display + Debug {
     fn call(
         &self,
         interpreter: &mut Interpreter,
-        args: &[LoxLiteral],
-    ) -> Result<LoxLiteral, Spanned<LoxError>>;
+        args: &[LoxValue],
+    ) -> Result<LoxValue, Spanned<LoxError>>;
 
     fn arity(&self) -> usize;
 }
@@ -32,12 +33,12 @@ impl Call for LoxFunction {
     fn call(
         &self,
         interpreter: &mut Interpreter,
-        args: &[LoxLiteral],
-    ) -> Result<LoxLiteral, Spanned<LoxError>> {
+        args: &[LoxValue],
+    ) -> Result<LoxValue, Spanned<LoxError>> {
         let local_scope = Rc::new(Env::new(self.env.clone()));
 
         for (param, arg) in self.params.iter().zip(args) {
-            local_scope.define(param, arg.clone())
+            local_scope.define(param.lexeme.clone(), arg.clone())
         }
 
         // Catch any return statements that are bubbled up by throwing an error
@@ -54,6 +55,14 @@ impl Call for LoxFunction {
 
     fn arity(&self) -> usize {
         self.params.len()
+    }
+}
+
+impl LoxFunction {
+    pub fn bind(mut self, instance: &Instance) -> LoxFunction {
+        self.env = Rc::new(Env::new(self.env));
+        self.env.define(format!("this"), LoxValue::Instance(instance.clone()));
+        self
     }
 }
 
@@ -74,7 +83,7 @@ pub mod globals {
     use std::fmt::Display;
     use std::fmt::Debug;
 
-    use crate::{ast::LoxLiteral, errors::LoxError, interpreter::Interpreter, span::Spanned};
+    use crate::{ast::LoxValue, errors::LoxError, interpreter::Interpreter, span::Spanned};
 
     use super::Call;
 
@@ -88,8 +97,8 @@ pub mod globals {
         fn call(
             &self,
             _interpreter: &mut Interpreter,
-            _args: &[LoxLiteral],
-        ) -> Result<LoxLiteral, Spanned<LoxError>> {
+            _args: &[LoxValue],
+        ) -> Result<LoxValue, Spanned<LoxError>> {
             use std::time::{SystemTime, UNIX_EPOCH};
 
             let epoch_millis = SystemTime::now()
@@ -97,7 +106,7 @@ pub mod globals {
                 .unwrap()
                 .as_millis() as f64;
 
-            Ok(LoxLiteral::Num(epoch_millis / 1000.0))
+            Ok(LoxValue::Num(epoch_millis / 1000.0))
         }
     }
 

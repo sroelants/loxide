@@ -4,6 +4,7 @@
 //! the iterator.
 
 use std::iter::Peekable;
+use std::rc::Rc;
 use std::vec::IntoIter;
 use crate::ast::Ast;
 use crate::ast::Stmt;
@@ -13,7 +14,7 @@ use crate::span::Spanned;
 use crate::tokens::Token;
 use crate::tokens::TokenType;
 use crate::ast::Expr;
-use crate::ast::LoxLiteral;
+use crate::ast::LoxValue;
 
 type ParseResult<T> = Result<T, Spanned<LoxError>>;
 
@@ -295,7 +296,7 @@ impl Parser {
         }
 
         let condition = condition
-            .unwrap_or(Expr::Literal { value: LoxLiteral::Bool(true) });
+            .unwrap_or(Expr::Literal { value: LoxValue::Bool(true) });
         body = Stmt::While { condition, body: Box::new(body) };
 
         if let Some(initializer) = initializer {
@@ -495,16 +496,20 @@ impl Parser {
     pub fn primary(&mut self) -> ParseResult<Expr> {
         use TokenType::*;
 
+        if let Some(keyword) = self.matches(This) {
+            return Ok(Expr::This { keyword });
+        }
+
         if let Some(_) = self.matches(False) {
-            return Ok(Expr::Literal { value: LoxLiteral::Bool(false) });
+            return Ok(Expr::Literal { value: LoxValue::Bool(false) });
         }
 
         if let Some(_) = self.matches(True) {
-            return Ok(Expr::Literal { value: LoxLiteral::Bool(true) });
+            return Ok(Expr::Literal { value: LoxValue::Bool(true) });
         }
 
         if let Some(_) = self.matches(Nil) {
-            return Ok(Expr::Literal { value: LoxLiteral::Nil });
+            return Ok(Expr::Literal { value: LoxValue::Nil });
         }
 
         if let Some(token) = self.matches(TokenType::String) {
@@ -512,14 +517,14 @@ impl Parser {
             let len = value.len();
             let trimmed = &value[1..len-1];
 
-            return Ok(Expr::Literal { value: LoxLiteral::Str(trimmed.to_owned()) });
+            return Ok(Expr::Literal { value: LoxValue::Str(Rc::new(trimmed.to_owned())) });
         }
 
         if let Some(token) = self.matches(Number) {
             // TODO: In theory this could fail? Can it though, if it got
             // tokenized correctly?
             let value: f64 = token.lexeme.parse().unwrap();
-            return Ok(Expr::Literal { value: LoxLiteral::Num(value) });
+            return Ok(Expr::Literal { value: LoxValue::Num(value) });
         }
 
         if let Some(name) = self.matches(Identifier) {

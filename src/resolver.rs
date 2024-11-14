@@ -10,7 +10,6 @@ pub struct Resolver<'a> {
 }
 
 enum FunctionType {
-    None,
     Function,
     Method,
 }
@@ -83,11 +82,17 @@ impl<'a> Resolver<'a> {
             Stmt::Class { name, methods } => {
                 self.resolve_class(name);
 
+                self.push_scope();
+
+                self.scopes.last_mut().unwrap().insert("this".to_owned(), true);
+
                 for method in methods {
                     if let Stmt::Fun { name, params, body } = method {
                         self.resolve_fun(FunctionType::Method, name, params, body);
                     }
                 }
+
+                self.pop_scope();
             }
         }
     }
@@ -172,6 +177,10 @@ impl<'a> Resolver<'a> {
             Expr::Set { value, object, .. } => {
                 self.resolve_expr(value);
                 self.resolve_expr(object);
+            },
+
+            Expr::This { keyword  } => {
+                self.resolve_local(expr, keyword);
             }
         }
     }

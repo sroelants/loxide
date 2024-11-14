@@ -1,8 +1,9 @@
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
-use crate::ast::LoxLiteral;
+use crate::ast::LoxValue;
 use crate::functions::LoxFunction;
 use crate::span::Spanned;
 use crate::errors::LoxError;
@@ -13,7 +14,7 @@ use crate::{functions::Call, tokens::Token};
 #[derive(Debug, Clone)]
 pub struct Class {
     pub name: Token,
-    pub methods: HashMap<String, LoxFunction>
+    pub methods: HashMap<String, Rc<LoxFunction>>
 }
 
 impl Display for Class {
@@ -22,18 +23,18 @@ impl Display for Class {
     }
 }
 
-impl Call for Class {
+impl Call for Rc<Class> {
     fn call(
         &self,
         _interpreter: &mut Interpreter,
-        _args: &[LoxLiteral],
-    ) -> Result<LoxLiteral, Spanned<LoxError>> {
-        let instance = Instance {
+        _args: &[LoxValue],
+    ) -> Result<LoxValue, Spanned<LoxError>> {
+        let instance = Instance(Rc::new(RefCell::new(InstanceInner {
             class: self.clone(),
             fields: HashMap::new(),
-        };
+        })));
 
-        Ok(LoxLiteral::Instance(instance))
+        Ok(LoxValue::Instance(instance))
     }
 
     fn arity(&self) -> usize {
@@ -41,22 +42,22 @@ impl Call for Class {
     }
 }
 
-// FIXME: Instances should store a _pointer_ to the class, so that I can mutate
-// the class at runtime, and all instances will have access to the new, mutated,
-// class properties. Note that the _instance_ is the thing that stores the state,
-// though!
 #[derive(Debug, Clone)]
-pub struct Instance {
-    class: Class,
-    fields: HashMap<String, LoxLiteral>
+pub struct InstanceInner {
+    pub class: Rc<Class>,
+    pub fields: HashMap<String, LoxValue>
 }
 
+#[derive(Debug, Clone)]
+pub struct Instance(pub Rc<RefCell<InstanceInner>>);
+
+
 impl Instance {
-    pub fn get(&self, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
-        if let Some(value) = self.fields.get(&name.lexeme) {
+    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
+        if let Some(value) = self.0.borrow().fields.get(&name.lexeme) {
             Ok(value.to_owned())
-        } else if let Some(method) = self.class.methods.get(&name.lexeme) {
-            Ok(LoxLiteral::Callable(Rc::new(method.to_owned())))
+        } else if let Some(method) = self.0.borrow().class.methods.get(&name.lexeme) {
+            Ok(LoxValue::Function(Rc::new(Rc::unwrap_or_clone(method.clone()).bind(&self.clone()))))
         } else {
             Err(Spanned {
                 value: LoxError::UndefinedProperty(name.lexeme.clone()),
@@ -65,13 +66,13 @@ impl Instance {
         }
     }
 
-    pub fn set(&mut self, name: &Token, value: LoxLiteral) {
-        self.fields.insert(name.lexeme.clone(), value);
+    pub fn set(&mut self, name: &Token, value: LoxValue) {
+        self.0.borrow_mut().fields.insert(name.lexeme.clone(), value);
     }
 }
 
 impl Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]", self.class)
+        write!(f, "[{}]", self.0.borrow().class)
     }
 }

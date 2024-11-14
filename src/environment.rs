@@ -7,9 +7,9 @@ use crate::errors::LoxError;
 use crate::functions::globals::Clock;
 use crate::span::Spanned;
 use crate::tokens::Token;
-use crate::ast::LoxLiteral;
+use crate::ast::LoxValue;
 
-type Bindings = HashMap<String, LoxLiteral>;
+type Bindings = HashMap<String, LoxValue>;
 
 #[derive(Debug)]
 pub struct Env {
@@ -27,7 +27,7 @@ impl Env {
 
     pub fn global() -> Self {
         let mut bindings = Bindings::new();
-        bindings.insert(format!("clock"), LoxLiteral::Callable(Rc::new(Clock)));
+        bindings.insert(format!("clock"), LoxValue::NativeFunction(Rc::new(Clock)));
 
         Self {
             parent: None,
@@ -35,11 +35,11 @@ impl Env {
         }
     }
 
-    pub fn define(&self, name: &Token, value: LoxLiteral) {
-        self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
+    pub fn define(&self, name: String, value: LoxValue) {
+        self.bindings.borrow_mut().insert(name, value);
     }
 
-    pub fn assign(&self, name: &Token, value: LoxLiteral) -> Result<(), Spanned<LoxError>> {
+    pub fn assign(&self, name: &Token, value: LoxValue) -> Result<(), Spanned<LoxError>> {
         if RefCell::borrow(&self.bindings).contains_key(&name.lexeme) {
             self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
             Ok(())
@@ -53,7 +53,7 @@ impl Env {
         }
     }
 
-    pub fn get(&self, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
+    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
         if let Some(value) = RefCell::borrow(&self.bindings).get(&name.lexeme) {
             Ok(value.to_owned())
         } else if let Some(parent) = &self.parent {
@@ -66,7 +66,7 @@ impl Env {
         }
     }
 
-    pub fn get_at(&self, dist: usize, name: &Token) -> Result<LoxLiteral, Spanned<LoxError>> {
+    pub fn get_at(&self, dist: usize, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
         let mut env = self;
 
         for _ in 0..dist {
@@ -80,7 +80,7 @@ impl Env {
         &self,
         dist: usize,
         name: &Token,
-        value: LoxLiteral
+        value: LoxValue
     ) -> Result<(), Spanned<LoxError>> {
         let mut env = self;
 

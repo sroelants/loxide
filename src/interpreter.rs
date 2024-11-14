@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::Ast;
-use crate::ast::LoxLiteral as Lit;
+use crate::ast::LoxValue as Lit;
 use crate::ast::Expr;
 use crate::ast::Stmt;
 use crate::class::Class;
 use crate::environment::Env;
 use crate::errors::LoxError;
+use crate::functions::Call;
 use crate::functions::LoxFunction;
 use crate::span::Span;
 use crate::span::Spanned;
@@ -101,7 +102,7 @@ impl<'a> Interpreter<'a> {
                     Lit::Nil
                 };
 
-                self.env.define(name, value);
+                self.env.define(name.lexeme.clone(), value);
             }
 
             Stmt::Block { statements } => {
@@ -116,13 +117,13 @@ impl<'a> Interpreter<'a> {
                     env: self.env.clone(),
                 };
 
-                self.env.define(name, Lit::Callable(Rc::new(function)));
+                self.env.define(name.lexeme.clone(), Lit::Function(Rc::new(function)));
             },
 
             Stmt::Class { name, methods } => {
-                self.env.define(name, Lit::Nil);
+                self.env.define(name.lexeme.clone(), Lit::Nil);
 
-                let mut methods_map: HashMap<String, LoxFunction> = HashMap::new();
+                let mut methods_map = HashMap::new();
 
                 for method in methods {
                     let Stmt::Fun { name, params, body } = method else { panic!() };
@@ -134,11 +135,11 @@ impl<'a> Interpreter<'a> {
                         env: self.env.clone(),
                     };
 
-                    methods_map.insert(name.lexeme.clone(), function);
+                    methods_map.insert(name.lexeme.clone(), Rc::new(function));
                 }
 
                 let class = Class { name: name.clone(), methods: methods_map };
-                self.env.assign(name, Lit::Callable(Rc::new(class)))?;
+                self.env.assign(name, Lit::Class(Rc::new(class)))?;
             }
         };
 
@@ -230,11 +231,14 @@ impl<'a> Interpreter<'a> {
                     })
                 }
             },
+
+            Expr::This { keyword } => {
+                self.lookup(keyword, expr)
+            },
         }
     }
 
     fn lookup(&self, name: &Token, expr: &Expr) -> Result<Lit> {
-
         if let Some(&dist) = self.locals.get(expr) {
             self.env.get_at(dist, name)
         } else {
@@ -250,20 +254,43 @@ impl<'a> Interpreter<'a> {
             evaluated_args.push(self.evaluate(arg)?);
         }
 
-        if let Lit::Callable(fun) = callee {
-            if args.len() != fun.arity() {
-                return Err(Spanned {
-                    value: LoxError::ArityMismatch(fun.arity(), args.len()),
-                    span: token.span,
-                });
-            }
+        match callee {
+            Lit::NativeFunction(fun) => {
+                if args.len() != fun.arity() {
+                    return Err(Spanned {
+                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        span: token.span,
+                    });
+                }
 
-            fun.call(self, &evaluated_args)
-        } else {
-            Err(Spanned {
-                value: LoxError::NotCallable,
-                span: token.span,
-            })
+                fun.call(self, &evaluated_args)
+            },
+            Lit::Function(fun) => {
+                if args.len() != fun.arity() {
+                    return Err(Spanned {
+                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        span: token.span,
+                    });
+                }
+
+                fun.call(self, &evaluated_args)
+            },
+            Lit::Class(fun) => {
+                if args.len() != fun.arity() {
+                    return Err(Spanned {
+                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        span: token.span,
+                    });
+                }
+
+                fun.call(self, &evaluated_args)
+            },
+            _ => {
+                Err(Spanned {
+                    value: LoxError::NotCallable,
+                    span: token.span,
+                })
+            }
         }
     }
 
@@ -314,7 +341,7 @@ impl<'a> Interpreter<'a> {
                 if let (Lit::Num(left), Lit::Num(right)) = (&left, &right) {
                     Ok(Lit::Num(left + right))
                 } else if let (Lit::Str(left), Lit::Str(right)) = (left, right) {
-                    Ok(Lit::Str(format!("{left}{right}")))
+                    Ok(Lit::Str(Rc::new(format!("{left}{right}"))))
                 } else {
                     Err(Spanned {
                         value: LoxError::MultiTypeError("string or number"),
@@ -383,7 +410,7 @@ fn is_truthy(value: &Lit) -> bool {
     }
 }
 
-fn assert_str(op: &Token, lit: Lit) -> Result<String> {
+fn assert_str(op: &Token, lit: Lit) -> Result<Rc<String>> {
     if let Lit::Str(str) = lit {
        Ok(str)
     } else {
