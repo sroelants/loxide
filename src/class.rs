@@ -3,11 +3,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
-use crate::ast::LoxValue;
 use crate::functions::LoxFunction;
 use crate::span::Spanned;
 use crate::errors::LoxError;
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, LoxValue};
 
 use crate::{functions::Call, tokens::Token};
 

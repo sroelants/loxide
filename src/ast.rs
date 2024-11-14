@@ -1,29 +1,25 @@
-use crate::class::{Class, Instance};
-use crate::functions::{Call, LoxFunction};
-use crate::tokens::Token;
 use std::hash::Hash;
 use std::{fmt::Display, rc::Rc};
+use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
-pub enum LoxValue {
+pub enum Literal {
     Bool(bool),
     Num(f64),
     Str(Rc<String>),
     Nil,
-    NativeFunction(Rc<dyn Call>),
-    Function(Rc<LoxFunction>),
-    Class(Rc<Class>),
-    Instance(Instance),
 }
 
-impl PartialEq for LoxValue {
-    fn eq(&self, other: &Self) -> bool {
-        if self.is_nil() && other.is_nil() {
-            return true;
-        }
+impl Hash for Literal {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state)
+    }
+}
 
+impl PartialEq for Literal {
+    fn eq(&self, other: &Self) -> bool {
         if self.is_nil() {
-            return false;
+            return other.is_nil();
         }
 
         if let (Self::Num(left), Self::Num(right)) = (&self, &other) {
@@ -38,31 +34,13 @@ impl PartialEq for LoxValue {
             return left == right;
         }
 
-        if let (Self::Function(left), Self::Function(right)) = (&self, &other) {
-            return Rc::ptr_eq(left, right);
-        }
-
-        if let (Self::NativeFunction(left), Self::NativeFunction(right)) = (&self, &other) {
-            return Rc::ptr_eq(left, right);
-        }
-
-        if let (Self::Class(left), Self::Class(right)) = (&self, &other) {
-            return Rc::ptr_eq(left, right);
-        }
-
         false
     }
 }
 
-impl Eq for LoxValue {}
+impl Eq for Literal {}
 
-impl Hash for LoxValue {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        core::mem::discriminant(self).hash(state)
-    }
-}
-
-impl LoxValue {
+impl Literal {
     pub fn is_bool(&self) -> bool {
         match self {
             Self::Bool(_) => true,
@@ -92,17 +70,13 @@ impl LoxValue {
     }
 }
 
-impl Display for LoxValue {
+impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoxValue::Nil => write!(f, "nil"),
-            LoxValue::Num(val) => write!(f, "{val}"),
-            LoxValue::Bool(val) => write!(f, "{val}"),
-            LoxValue::Str(val) => write!(f, "{val}"),
-            LoxValue::Function(val) => write!(f, "{val}"),
-            LoxValue::NativeFunction(val) => write!(f, "{val}"),
-            LoxValue::Class(val) => write!(f, "{val}"),
-            LoxValue::Instance(instance) => write!(f, "{}", instance),
+            Self::Nil => write!(f, "nil"),
+            Self::Num(val) => write!(f, "{val}"),
+            Self::Bool(val) => write!(f, "{val}"),
+            Self::Str(val) => write!(f, "{val}"),
         }
     }
 }
@@ -153,7 +127,7 @@ pub enum Expr {
         arguments: Vec<Expr>,
     },
     Literal {
-        value: LoxValue,
+        value: Literal,
     },
 }
 

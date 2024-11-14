@@ -7,7 +7,7 @@ use crate::errors::LoxError;
 use crate::functions::globals::Clock;
 use crate::span::Spanned;
 use crate::tokens::Token;
-use crate::ast::LoxValue;
+use crate::interpreter::LoxValue;
 
 type Bindings = HashMap<String, LoxValue>;
 

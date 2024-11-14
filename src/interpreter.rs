@@ -1,9 +1,13 @@
 #![allow(dead_code)]
+use std::fmt::Display;
+use std::hash::Hash;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::Ast;
-use crate::ast::LoxValue as Lit;
+use crate::ast::Literal;
+use crate::class::Instance;
+use crate::interpreter::LoxValue as Val;
 use crate::ast::Expr;
 use crate::ast::Stmt;
 use crate::class::Class;
@@ -49,15 +53,15 @@ impl<'a> Interpreter<'a> {
         self.locals.insert(expr, depth);
     }
 
-    pub fn interpret(&mut self, ast: &Ast) -> Result<Lit> {
+    pub fn interpret(&mut self, ast: &Ast) -> Result<Val> {
         for statement in ast.iter() {
             self.execute(statement)?;
         }
 
-        Ok(Lit::Nil)
+        Ok(Val::Nil)
     }
 
-    fn execute(&mut self, statement: &Stmt) -> Result<Lit> {
+    fn execute(&mut self, statement: &Stmt) -> Result<Val> {
         match statement {
             Stmt::Print { expr } => {
                 let val = self.evaluate(expr)?;
@@ -68,7 +72,7 @@ impl<'a> Interpreter<'a> {
                 let value = if let Some(expr) = expr {
                     self.evaluate(expr)?
                 } else {
-                    Lit::Nil
+                    Val::Nil
                 };
 
                 Err(Spanned {
@@ -99,7 +103,7 @@ impl<'a> Interpreter<'a> {
                 let value = if let Some(expr) = initializer {
                     self.evaluate(expr)?
                 } else {
-                    Lit::Nil
+                    Val::Nil
                 };
 
                 self.env.define(name.lexeme.clone(), value);
@@ -117,11 +121,11 @@ impl<'a> Interpreter<'a> {
                     env: self.env.clone(),
                 };
 
-                self.env.define(name.lexeme.clone(), Lit::Function(Rc::new(function)));
+                self.env.define(name.lexeme.clone(), Val::Function(Rc::new(function)));
             },
 
             Stmt::Class { name, methods } => {
-                self.env.define(name.lexeme.clone(), Lit::Nil);
+                self.env.define(name.lexeme.clone(), Val::Nil);
 
                 let mut methods_map = HashMap::new();
 
@@ -139,14 +143,14 @@ impl<'a> Interpreter<'a> {
                 }
 
                 let class = Class { name: name.clone(), methods: methods_map };
-                self.env.assign(name, Lit::Class(Rc::new(class)))?;
+                self.env.assign(name, Val::Class(Rc::new(class)))?;
             }
         };
 
-        Ok(Lit::Nil)
+        Ok(Val::Nil)
     }
 
-    fn exec_block(&mut self, statements: &Vec<Stmt>) -> Result<Lit> {
+    fn exec_block(&mut self, statements: &Vec<Stmt>) -> Result<Val> {
         self.push_scope();
 
         for statement in statements.iter() {
@@ -157,11 +161,11 @@ impl<'a> Interpreter<'a> {
         }
 
         self.pop_scope();
-        Ok(Lit::Nil)
+        Ok(Val::Nil)
     }
 
     // Additional helper that allows us to execute a block with a given environment.
-    pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Rc<Env>) -> Result<Lit> {
+    pub fn exec_block_with_env(&mut self, statements: &Vec<Stmt>, env: Rc<Env>) -> Result<Val> {
         let prev_env = std::mem::replace(&mut self.env, env);
 
         for statement in statements.iter() {
@@ -172,12 +176,12 @@ impl<'a> Interpreter<'a> {
         }
 
         self.env = prev_env;
-        Ok(Lit::Nil)
+        Ok(Val::Nil)
     }
 
-    fn evaluate(&mut self, expr: &Expr) -> Result<Lit> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Val> {
         match expr {
-            Expr::Literal { value } => Ok(value.clone()),
+            Expr::Literal { value } => Ok(value.clone().into()),
 
             Expr::Call { callee, arguments, paren } => self.eval_call(callee, arguments, &paren),
 
@@ -206,7 +210,7 @@ impl<'a> Interpreter<'a> {
             Expr::Get { name, object } => {
                 let object = self.evaluate(object)?;
 
-                if let Lit::Instance(instance) = object {
+                if let Val::Instance(instance) = object {
                     instance.get(name)
                 } else {
                     Err(Spanned {
@@ -220,7 +224,7 @@ impl<'a> Interpreter<'a> {
             Expr::Set { name, value, object } => {
                 let object = self.evaluate(object)?;
 
-                if let Lit::Instance(mut instance) = object {
+                if let Val::Instance(mut instance) = object {
                     let value = self.evaluate(value)?;
                     instance.set(name, value.clone());
                     Ok(value)
@@ -238,7 +242,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn lookup(&self, name: &Token, expr: &Expr) -> Result<Lit> {
+    fn lookup(&self, name: &Token, expr: &Expr) -> Result<Val> {
         if let Some(&dist) = self.locals.get(expr) {
             self.env.get_at(dist, name)
         } else {
@@ -246,7 +250,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_call(&mut self, callee: &Expr, args: &[Expr], token: &Token) -> Result<Lit> {
+    fn eval_call(&mut self, callee: &Expr, args: &[Expr], token: &Token) -> Result<Val> {
         let callee = self.evaluate(callee)?;
         let mut evaluated_args = Vec::new();
 
@@ -255,7 +259,7 @@ impl<'a> Interpreter<'a> {
         }
 
         match callee {
-            Lit::NativeFunction(fun) => {
+            Val::NativeFunction(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
                         value: LoxError::ArityMismatch(fun.arity(), args.len()),
@@ -265,7 +269,7 @@ impl<'a> Interpreter<'a> {
 
                 fun.call(self, &evaluated_args)
             },
-            Lit::Function(fun) => {
+            Val::Function(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
                         value: LoxError::ArityMismatch(fun.arity(), args.len()),
@@ -275,7 +279,7 @@ impl<'a> Interpreter<'a> {
 
                 fun.call(self, &evaluated_args)
             },
-            Lit::Class(fun) => {
+            Val::Class(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
                         value: LoxError::ArityMismatch(fun.arity(), args.len()),
@@ -294,22 +298,22 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_unary(&mut self, op: &Token, right: &Expr) -> Result<Lit> {
+    fn eval_unary(&mut self, op: &Token, right: &Expr) -> Result<Val> {
         let right = self.evaluate(right)?;
 
         match op.token_type {
-            TokenType::Bang => Ok(Lit::Bool(!is_truthy(&right))),
+            TokenType::Bang => Ok(Val::Bool(!is_truthy(&right))),
 
             TokenType::Minus => {
                 let num = assert_num(&op, right)?;
-                Ok(Lit::Num(-num))
+                Ok(Val::Num(-num))
             },
 
             _ => unreachable!(),
         }
     }
 
-    fn eval_logical(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
+    fn eval_logical(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Val> {
         let left = self.evaluate(left)?;
 
         if op.token_type == TokenType::Or {
@@ -325,7 +329,7 @@ impl<'a> Interpreter<'a> {
         self.evaluate(right)
     }
 
-    fn eval_binary(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Lit> {
+    fn eval_binary(&mut self, op: &Token, left: &Expr, right: &Expr) -> Result<Val> {
         let left = self.evaluate(left)?;
         let right = self.evaluate(right)?;
 
@@ -334,14 +338,14 @@ impl<'a> Interpreter<'a> {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Num(left - right))
+                Ok(Val::Num(left - right))
             },
 
             TokenType::Plus => {
-                if let (Lit::Num(left), Lit::Num(right)) = (&left, &right) {
-                    Ok(Lit::Num(left + right))
-                } else if let (Lit::Str(left), Lit::Str(right)) = (left, right) {
-                    Ok(Lit::Str(Rc::new(format!("{left}{right}"))))
+                if let (Val::Num(left), Val::Num(right)) = (&left, &right) {
+                    Ok(Val::Num(left + right))
+                } else if let (Val::Str(left), Val::Str(right)) = (left, right) {
+                    Ok(Val::Str(Rc::new(format!("{left}{right}"))))
                 } else {
                     Err(Spanned {
                         value: LoxError::MultiTypeError("string or number"),
@@ -354,14 +358,14 @@ impl<'a> Interpreter<'a> {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Num(left * right))
+                Ok(Val::Num(left * right))
             },
 
             TokenType::Slash => {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Num(left / right))
+                Ok(Val::Num(left / right))
 
             },
 
@@ -369,67 +373,181 @@ impl<'a> Interpreter<'a> {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Bool(left > right))
+                Ok(Val::Bool(left > right))
             },
 
             TokenType::GreaterEqual => {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Bool(left >= right))
+                Ok(Val::Bool(left >= right))
             },
 
             TokenType::Less => {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Bool(left < right))
+                Ok(Val::Bool(left < right))
             },
 
             TokenType::LessEqual => {
                 let left = assert_num(&op, left)?;
                 let right = assert_num(&op, right)?;
 
-                Ok(Lit::Bool(left <= right))
+                Ok(Val::Bool(left <= right))
             },
 
-            TokenType::BangEqual => Ok(Lit::Bool(left != right)),
+            TokenType::BangEqual => Ok(Val::Bool(left != right)),
 
-            TokenType::EqualEqual => Ok(Lit::Bool(left == right)),
+            TokenType::EqualEqual => Ok(Val::Bool(left == right)),
 
             _ => unreachable!()
         }
     }
 }
 
-fn is_truthy(value: &Lit) -> bool {
+fn is_truthy(value: &Val) -> bool {
     match value {
-        Lit::Nil => false,
-        Lit::Bool(b) => *b,
+        Val::Nil => false,
+        Val::Bool(b) => *b,
         _ => true
     }
 }
 
-fn assert_str(op: &Token, lit: Lit) -> Result<Rc<String>> {
-    if let Lit::Str(str) = lit {
+fn assert_str(op: &Token, lit: Val) -> Result<Rc<String>> {
+    if let Val::Str(str) = lit {
        Ok(str)
     } else {
         Err(Spanned { value: LoxError::TypeError("string"), span: op.span })
     }
 }
 
-fn assert_num(op: &Token, lit: Lit) -> Result<f64> {
-    if let Lit::Num(num) = lit {
+fn assert_num(op: &Token, lit: Val) -> Result<f64> {
+    if let Val::Num(num) = lit {
        Ok(num)
     } else {
         Err(Spanned { value: LoxError::TypeError("number"), span: op.span })
     }
 }
 
-fn assert_bool(op: &Token, lit: Lit) -> Result<bool> {
-    if let Lit::Bool(boolean) = lit {
+fn assert_bool(op: &Token, lit: Val) -> Result<bool> {
+    if let Val::Bool(boolean) = lit {
        Ok(boolean)
     } else {
         Err(Spanned { value: LoxError::TypeError("bool"), span: op.span })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum LoxValue {
+    Bool(bool),
+    Num(f64),
+    Str(Rc<String>),
+    Nil,
+    NativeFunction(Rc<dyn Call>),
+    Function(Rc<LoxFunction>),
+    Class(Rc<Class>),
+    Instance(Instance),
+}
+
+impl PartialEq for LoxValue {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_nil() && other.is_nil() {
+            return true;
+        }
+
+        if self.is_nil() {
+            return false;
+        }
+
+        if let (Self::Num(left), Self::Num(right)) = (&self, &other) {
+            return left == right;
+        }
+
+        if let (Self::Str(left), Self::Str(right)) = (&self, &other) {
+            return left == right;
+        }
+
+        if let (Self::Bool(left), Self::Bool(right)) = (&self, &other) {
+            return left == right;
+        }
+
+        if let (Self::Function(left), Self::Function(right)) = (&self, &other) {
+            return Rc::ptr_eq(left, right);
+        }
+
+        if let (Self::NativeFunction(left), Self::NativeFunction(right)) = (&self, &other) {
+            return Rc::ptr_eq(left, right);
+        }
+
+        if let (Self::Class(left), Self::Class(right)) = (&self, &other) {
+            return Rc::ptr_eq(left, right);
+        }
+
+        false
+    }
+}
+
+impl Eq for LoxValue {}
+
+impl Hash for LoxValue {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state)
+    }
+}
+
+impl LoxValue {
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Self::Bool(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_num(&self) -> bool {
+        match self {
+            Self::Num(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_str(&self) -> bool {
+        match self {
+            Self::Str(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_nil(&self) -> bool {
+        match self {
+            Self::Nil => true,
+            _ => false,
+        }
+    }
+}
+
+impl Display for LoxValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoxValue::Nil => write!(f, "nil"),
+            LoxValue::Num(val) => write!(f, "{val}"),
+            LoxValue::Bool(val) => write!(f, "{val}"),
+            LoxValue::Str(val) => write!(f, "{val}"),
+            LoxValue::Function(val) => write!(f, "{val}"),
+            LoxValue::NativeFunction(val) => write!(f, "{val}"),
+            LoxValue::Class(val) => write!(f, "{val}"),
+            LoxValue::Instance(instance) => write!(f, "{}", instance),
+        }
+    }
+}
+
+impl From<Literal> for LoxValue {
+    fn from(value: Literal) -> Self {
+        match value {
+            Literal::Nil => Self::Nil,
+            Literal::Num(val) => Self::Num(val),
+            Literal::Bool(val) => Self::Bool(val),
+            Literal::Str(val) => Self::Str(val),
+        }
     }
 }

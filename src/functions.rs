@@ -2,8 +2,9 @@ use std::{fmt::Display, rc::Rc};
 use std::fmt::Debug;
 
 use crate::class::Instance;
+use crate::interpreter::LoxValue;
 use crate::{
-    ast::{LoxValue, Stmt},
+    ast::Stmt,
     environment::Env,
     errors::LoxError,
     interpreter::Interpreter,
@@ -83,7 +84,8 @@ pub mod globals {
     use std::fmt::Display;
     use std::fmt::Debug;
 
-    use crate::{ast::LoxValue, errors::LoxError, interpreter::Interpreter, span::Spanned};
+    use crate::interpreter::LoxValue;
+    use crate::{errors::LoxError, interpreter::Interpreter, span::Spanned};
 
     use super::Call;
 
