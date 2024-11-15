@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::interpreter::LoxValue;
+use crate::interpreter::value::LoxValue;
 use crate::colors::{RED, NORMAL};
 
 use crate::span::Annotated;

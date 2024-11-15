@@ -3,9 +3,9 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use interpreter::Interpreter;
 use parser::Parser;
-use resolver::Resolver;
+use interpreter::{Interpreter, Visitor};
+use interpreter::resolver::Resolver;
 use sourcemap::SourceMap;
 use tokenizer::Scanner;
 use colors::{NORMAL, RED};
@@ -18,14 +18,10 @@ pub mod ast;
 pub mod pretty_print;
 pub mod tokens;
 pub mod span;
-pub mod interpreter;
-pub mod environment;
 pub mod errors;
 pub mod sourcemap;
-pub mod functions;
-pub mod resolver;
 pub mod util;
-pub mod class;
+pub mod interpreter;
 
 
 fn main() {
@@ -133,7 +129,7 @@ impl Loxide {
         // Interpreting
         let mut interpreter = Interpreter::new(resolver.locals);
 
-        match interpreter.interpret(&ast) {
+        match interpreter.visit(&ast) {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;

@@ -1,14 +1,14 @@
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
-use crate::functions::LoxFunction;
+use super::functions::LoxFunction;
+use super::functions::Call;
 use crate::span::Spanned;
 use crate::errors::LoxError;
-use crate::interpreter::{Interpreter, LoxValue};
-
-use crate::{functions::Call, tokens::Token};
+use crate::interpreter::Interpreter;
+use crate::interpreter::value::LoxValue;
+use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub struct Class {

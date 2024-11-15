@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::errors::LoxError;
-use crate::functions::globals::Clock;
+use super::functions::globals::Clock;
 use crate::span::Spanned;
 use crate::tokens::Token;
-use crate::interpreter::LoxValue;
+use crate::interpreter::value::LoxValue;
 
 type Bindings = HashMap<String, LoxValue>;
 
