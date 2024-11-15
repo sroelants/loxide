@@ -4,10 +4,10 @@ use super::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub enum Literal {
+    Nil,
     Bool(bool),
     Num(f64),
     Str(Rc<String>),
-    Nil,
 }
 
 impl Hash for Literal {

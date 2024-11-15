@@ -104,7 +104,6 @@ impl Loxide {
 
         // Error reporting
 
-
         let ast = match parsed {
             Ok(ast) => ast,
             Err(errors) => {

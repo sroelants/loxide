@@ -11,10 +11,10 @@ use super::class::{Class, Instance};
 
 #[derive(Debug, Clone)]
 pub enum LoxValue {
+    Nil,
     Bool(bool),
     Num(f64),
     Str(Rc<String>),
-    Nil,
     NativeFunction(Rc<dyn Call>),
     Function(Rc<LoxFunction>),
     Class(Rc<Class>),

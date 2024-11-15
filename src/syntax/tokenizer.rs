@@ -7,12 +7,6 @@ use crate::span::Spanned;
 use super::tokens::Token;
 use super::tokens::TokenType;
 
-#[derive(Debug, Clone)]
-pub struct LexError {
-    pub span: Span,
-    pub msg: &'static str,
-}
-
 pub struct Scanner<'a> {
     source: &'a str,
     finished: bool,
