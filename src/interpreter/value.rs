@@ -1,10 +1,10 @@
 use std::{fmt::Display, rc::Rc};
 use std::hash::Hash;
 
-use crate::ast::Literal;
 use crate::errors::LoxError;
 use crate::span::Spanned;
-use crate::tokens::Token;
+use crate::syntax::ast::Literal;
+use crate::syntax::tokens::Token;
 use super::functions::LoxFunction;
 use super::functions::Call;
 use super::class::{Class, Instance};

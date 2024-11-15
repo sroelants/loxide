@@ -3,26 +3,22 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 
-use parser::Parser;
+use colors::{NORMAL, RED};
 use interpreter::{Interpreter, Visitor};
 use interpreter::resolver::Resolver;
 use sourcemap::SourceMap;
-use tokenizer::Scanner;
-use colors::{NORMAL, RED};
-use tokens::Token;
+use syntax::tokenizer::Scanner;
+use syntax::parser::Parser;
+use syntax::tokens::Token;
 
-pub mod tokenizer;
-pub mod parser;
 pub mod colors;
-pub mod ast;
 pub mod pretty_print;
-pub mod tokens;
 pub mod span;
 pub mod errors;
 pub mod sourcemap;
 pub mod util;
 pub mod interpreter;
-
+pub mod syntax;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

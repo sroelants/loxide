@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
-use crate::ast::Stmt;
+use crate::syntax::ast::Stmt;
 use crate::span::Spanned;
 use crate::span::Span;
 use super::functions::LoxFunction;

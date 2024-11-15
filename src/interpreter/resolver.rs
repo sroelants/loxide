@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Expr, Stmt}, errors::LoxError, span::Spanned, tokens::Token};
+use crate::span::Spanned;
+use crate::errors::LoxError;
+use crate::syntax::ast::{Expr, Stmt};
+use crate::syntax::tokens::Token;
 
 pub struct Resolver<'a> {
     scopes: Vec<HashMap<String, bool>>,

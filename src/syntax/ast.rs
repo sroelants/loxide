@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use std::{fmt::Display, rc::Rc};
-use crate::tokens::Token;
+use super::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub enum Literal {

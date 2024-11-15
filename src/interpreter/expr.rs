@@ -2,12 +2,12 @@
 use std::rc::Rc;
 
 use crate::interpreter::LoxValue as Val;
-use crate::ast::Expr;
 use crate::errors::LoxError;
 use super::functions::Call;
 use crate::span::Spanned;
-use crate::tokens::Token;
-use crate::tokens::TokenType;
+use crate::syntax::ast::Expr;
+use crate::syntax::tokens::Token;
+use crate::syntax::tokens::TokenType;
 
 use super::{Interpreter, LoxResult, Visitor};
 

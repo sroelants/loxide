@@ -4,8 +4,8 @@ use environment::Env;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::ast::Ast;
-use crate::ast::Expr;
+use crate::syntax::ast::Ast;
+use crate::syntax::ast::Expr;
 use crate::errors::LoxError;
 use crate::span::Spanned;
 

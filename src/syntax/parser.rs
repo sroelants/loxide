@@ -6,15 +6,15 @@
 use std::iter::Peekable;
 use std::rc::Rc;
 use std::vec::IntoIter;
-use crate::ast::Ast;
-use crate::ast::Literal;
-use crate::ast::Stmt;
 use crate::errors::LoxError;
 use crate::span::Span;
 use crate::span::Spanned;
-use crate::tokens::Token;
-use crate::tokens::TokenType;
-use crate::ast::Expr;
+use super::ast::Ast;
+use super::ast::Literal;
+use super::ast::Stmt;
+use super::tokens::Token;
+use super::tokens::TokenType;
+use super::ast::Expr;
 
 type ParseResult<T> = Result<T, Spanned<LoxError>>;
 

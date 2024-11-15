@@ -4,8 +4,8 @@ use std::str::Chars;
 use crate::errors::LoxError;
 use crate::span::Span;
 use crate::span::Spanned;
-use crate::tokens::Token;
-use crate::tokens::TokenType;
+use super::tokens::Token;
+use super::tokens::TokenType;
 
 #[derive(Debug, Clone)]
 pub struct LexError {
@@ -243,7 +243,7 @@ fn ident_type(s: &str) -> TokenType {
 
 #[cfg(test)]
 mod tests {
-    use crate::tokens::Token;
+    use crate::syntax::tokens::Token;
 
     use super::*;
 

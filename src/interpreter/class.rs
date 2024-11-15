@@ -8,7 +8,7 @@ use crate::span::Spanned;
 use crate::errors::LoxError;
 use crate::interpreter::Interpreter;
 use crate::interpreter::value::LoxValue;
-use crate::tokens::Token;
+use crate::syntax::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub struct Class {

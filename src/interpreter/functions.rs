@@ -4,13 +4,11 @@ use std::fmt::Debug;
 use super::environment::Env;
 use super::class::Instance;
 use crate::interpreter::value::LoxValue;
-use crate::{
-    ast::Stmt,
-    errors::LoxError,
-    interpreter::Interpreter,
-    span::Spanned,
-    tokens::Token,
-};
+use crate::syntax::tokens::Token;
+use crate::span::Spanned;
+use crate::interpreter::Interpreter;
+use crate::errors::LoxError;
+use crate::syntax::ast::Stmt;
 
 pub trait Call: Display + Debug {
     fn call(
