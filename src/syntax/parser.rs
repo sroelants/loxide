@@ -5,32 +5,35 @@
 
 use std::iter::Peekable;
 use std::rc::Rc;
-use std::vec::IntoIter;
 use crate::errors::LoxError;
+use crate::sourcemap::Source;
 use crate::span::Span;
 use crate::span::Spanned;
 use super::ast::Ast;
 use super::ast::Literal;
 use super::ast::Stmt;
+use super::tokenizer::Scanner;
 use super::tokens::Token;
 use super::tokens::TokenType;
 use super::ast::Expr;
 
 type ParseResult<T> = Result<T, Spanned<LoxError>>;
 
-pub struct Parser {
-    tokens: Peekable<IntoIter<Token>>,
-    errors: Vec<Spanned<LoxError>>,
+pub struct Parser<'a> {
+    source: &'a Source<'a>,
+    tokens: Peekable<&'a mut Scanner<'a>>,
     span: Span,
+    had_error: bool,
 
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(source: &'a Source<'a>, scanner: &'a mut Scanner<'a> ) -> Self {
         Self {
-            tokens: tokens.into_iter().peekable(),
-            errors: Vec::new(),
+            source,
+            tokens: scanner.peekable(),
             span: Span::new(),
+            had_error: false
         }
     }
 
@@ -42,12 +45,13 @@ impl Parser {
         }
     }
 
-    pub fn errors(&self) -> &[Spanned<LoxError>] {
-        self.errors.as_slice()
+    fn spanned_error(&mut self, spanned: Spanned<LoxError>) {
+        eprintln!("{}", self.source.annotate(spanned));
     }
 
-    fn error(&mut self, err: LoxError) -> Spanned<LoxError> {
-        Spanned { value: err, span: self.span }
+    fn error(&mut self, err: LoxError) {
+        let spanned = Spanned { value: err, span: self.span };
+        eprintln!("{}", self.source.annotate(spanned));
     }
 
     /// Checks whether the next token matches the provided type, without
@@ -207,10 +211,12 @@ impl Parser {
 
             while let Some(_) = self.matches(Comma) {
                 if params.len() >= 255 {
-                    self.errors.push(Spanned {
+                    let spanned = Spanned {
                         value: LoxError::TooManyParams,
                         span: self.tokens.peek().unwrap().span,
-                    })
+                    };
+
+                    self.spanned_error(spanned)
                 }
 
                 params.push(
@@ -354,7 +360,10 @@ impl Parser {
                 return Ok(Expr::Set { name, object, value: Box::new(value) });
             }
 
-            return Err(self.error(LoxError::InvalidAssigTarget));
+            return Err(Spanned {
+                value: LoxError::InvalidAssigTarget,
+                span: self.span,
+            });
         }
 
         return Ok(expr);
@@ -478,10 +487,12 @@ impl Parser {
             // match any following arguments, followed by a comma
             while let Some(_) = self.matches(Comma) {
                 if arguments.len() >= 255 {
-                    self.errors.push(Spanned {
+                    let spanned = Spanned {
                         value: LoxError::TooManyArgs,
                         span: self.tokens.peek().unwrap().span,
-                    });
+                    };
+
+                    self.spanned_error(spanned);
                 }
 
                 arguments.push(self.expression()?);
@@ -538,10 +549,13 @@ impl Parser {
             return Ok(Expr::Grouping { expr: Box::new(expr) });
         }
 
-        Err(self.error(LoxError::ExpectedExpression))
+        Err(Spanned {
+            value: LoxError::ExpectedExpression,
+            span: self.span
+        })
     }
 
-    pub fn parse(&mut self) -> Result<Ast, Vec<Spanned<LoxError>>> {
+    pub fn parse(&mut self) -> Result<Ast, ()> {
         let mut statements = Vec::new();
 
         while !self.finished() {
@@ -550,16 +564,16 @@ impl Parser {
                     statements.push(statement)
                 },
                 Err(err) => {
-                    self.errors.push(err);
+                    self.spanned_error(err);
                     self.synchronize();
                 }
             }
         }
 
-        if self.errors.len() == 0 {
+        if !self.had_error {
             Ok(statements)
         } else {
-            Err(std::mem::take(&mut self.errors))
+            Err(())
         }
     }
 }

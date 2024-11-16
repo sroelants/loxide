@@ -2,40 +2,36 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use crate::errors::LoxError;
+use crate::sourcemap::Source;
 use crate::span::Span;
 use crate::span::Spanned;
 use super::tokens::Token;
 use super::tokens::TokenType;
 
 pub struct Scanner<'a> {
-    source: &'a str,
+    source: &'a Source<'a>,
     finished: bool,
     chars: Peekable<Chars<'a>>,
     span: Span,
-    pub errors: Vec<Spanned<LoxError>>,
+    had_error: bool
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(source: &'a Source<'a>) -> Self {
         Self {
             source,
             finished: false,
-            chars: source.chars().peekable(),
+            chars: source.source.chars().peekable(),
             span: Span::default(),
-            errors: Vec::new(),
+            had_error: false,
         }
-    }
-
-    pub fn errors(&self) -> &[Spanned<LoxError>] {
-        self.errors.as_slice()
     }
 
     /// Push a new LexError to the internal list of encountered errors
     fn error(&mut self, err: LoxError) {
-        self.errors.push(Spanned {
-            value: err,
-            span: self.span,
-        });
+        let spanned = Spanned { value: err, span: self.span };
+        eprintln!("{}", self.source.annotate(spanned));
+        self.had_error = true;
     }
 
     /// Peek two characters ahead without advancing the internal iterator.
@@ -190,7 +186,7 @@ impl<'a> Iterator for Scanner<'a> {
                 // Identifiers
                 _ if ch.is_ascii_alphabetic() => {
                     self.identifier();
-                    let ident = &self.source[self.span.range()];
+                    let ident = &self.source.source[self.span.range()];
                     ident_type(ident)
                 }
 
@@ -203,7 +199,7 @@ impl<'a> Iterator for Scanner<'a> {
             return Some(Token {
                 token_type,
                 span: self.span,
-                lexeme: self.source[self.span.range()].to_owned(),
+                lexeme: self.source.source[self.span.range()].to_owned(),
             });
         }
     }
@@ -244,7 +240,8 @@ mod tests {
     #[test]
     fn minimal() {
         use TokenType::*;
-        let scanner = Scanner::new(".");
+        let source = Source::new(".");
+        let scanner = Scanner::new(&source);
 
         assert_eq!(
             scanner.collect::<Vec<_>>(),
@@ -266,7 +263,8 @@ mod tests {
     #[test]
     fn single_tokens() {
         use TokenType::*;
-        let scanner = Scanner::new("((.))");
+        let source = Source::new("((.))");
+        let scanner = Scanner::new(&source);
         assert_eq!(
             scanner.collect::<Vec<_>>(),
             vec![
@@ -307,7 +305,8 @@ mod tests {
     #[test]
     fn two_char_tokens() {
         use TokenType::*;
-        let scanner = Scanner::new("!=!");
+        let source = Source::new("!=!");
+        let scanner = Scanner::new(&source);
         assert_eq!(
             scanner.collect::<Vec<_>>(),
             vec![
@@ -333,7 +332,8 @@ mod tests {
     #[test]
     fn comments() {
         use TokenType::*;
-        let scanner = Scanner::new("() // lolol");
+        let source = Source::new("() // lolol");
+        let scanner = Scanner::new(&source);
 
         assert_eq!(
             scanner.collect::<Vec<_>>(),
@@ -359,7 +359,8 @@ mod tests {
 
     #[test]
     fn strings() {
-        let scanner = Scanner::new(r#""Hello there!""#);
+        let source = Source::new(r#""Hello there!""#);
+        let scanner = Scanner::new(&source);
         assert_eq!(
             scanner.collect::<Vec<_>>(),
             vec![
@@ -379,17 +380,19 @@ mod tests {
 
     #[test]
     fn unterminated_strings() {
-        let mut scanner = Scanner::new(r#""Hello there!"#);
+        let source = Source::new(r#""Hello there!"#);
+        let mut scanner = Scanner::new(&source);
 
         // Consume the tokens
         for _ in scanner.by_ref() {}
 
-        assert!(scanner.errors.len() == 1);
+        assert!(scanner.had_error);
     }
 
     #[test]
     fn numbers() {
-        let scanner = Scanner::new("123, 123.0, 123.");
+        let source = Source::new("123, 123.0, 123.");
+        let scanner = Scanner::new(&source);
 
         assert_eq!(
             scanner.collect::<Vec<_>>(),

@@ -1,11 +1,12 @@
 use crate::span::{Span, Spanned, Annotated};
 
-pub struct SourceMap<'a> {
+pub struct Source<'a> {
+    pub source: &'a str,
     lines: Vec<&'a str>,
     offsets: Vec<usize>,
 }
 
-impl<'a> SourceMap<'a> {
+impl<'a> Source<'a> {
     pub fn new(source: &'a str) -> Self {
         let lines: Vec<&str> = source.lines().collect();
         let mut offsets = vec![0];
@@ -16,7 +17,7 @@ impl<'a> SourceMap<'a> {
             }
         }
 
-        Self { lines, offsets }
+        Self { source, lines, offsets }
     }
 
     /// Given a span, return the line, column, and source text of the line

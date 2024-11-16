@@ -6,10 +6,9 @@ use std::path::PathBuf;
 use colors::{NORMAL, RED};
 use interpreter::{Interpreter, Visitor};
 use interpreter::resolver::Resolver;
-use sourcemap::SourceMap;
+use sourcemap::Source;
 use syntax::tokenizer::Scanner;
 use syntax::parser::Parser;
-use syntax::tokens::Token;
 
 pub mod colors;
 pub mod pretty_print;
@@ -85,34 +84,18 @@ impl Loxide {
     }
 
     pub fn run(&mut self, input: &str) {
-        let sourcemap = SourceMap::new(input);
+        let source = Source::new(input);
 
         // Tokenizing
-        let mut scanner = Scanner::new(input);
-        let tokens: Vec<Token> = scanner.by_ref().collect();
-
-        // Move this up, somewhere else?
-        for error in scanner.errors {
-            self.static_error = true;
-            let annotated = sourcemap.annotate(error);
-            eprintln!("{}", annotated);
-        }
+        let mut scanner = Scanner::new(&source);
 
         // Parsing
-        let mut parser = Parser::new(tokens);
+        let mut parser = Parser::new(&source, &mut scanner);
         let parsed = parser.parse();
-
-        // Error reporting
 
         let ast = match parsed {
             Ok(ast) => ast,
-            Err(errors) => {
-                for error in errors {
-                    self.static_error = true;
-                    let annotated = sourcemap.annotate(error);
-                    eprintln!("{}", annotated);
-                }
-
+            Err(_) => {
                 return;
             }
         };
@@ -128,7 +111,7 @@ impl Loxide {
             Ok(lit) => println!("{lit}"),
             Err(error) => {
                 self.runtime_error = true;
-                let annotated = sourcemap.annotate(error);
+                let annotated = source.annotate(error);
                 eprintln!("{}", annotated);
             }
         }
