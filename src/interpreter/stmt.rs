@@ -11,7 +11,9 @@ use super::value::LoxValue;
 
 use super::{Interpreter, LoxResult, Visitor};
 
-impl<'a> Visitor<Stmt> for Interpreter<'a> {
+impl<'a> Visitor<&Stmt> for Interpreter<'a> {
+    type Output = LoxResult;
+
     fn visit(&mut self, statement: &Stmt) -> LoxResult {
         match statement {
             Stmt::Print { expr } => {

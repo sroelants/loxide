@@ -49,11 +49,6 @@ impl<'a> Parser<'a> {
         eprintln!("{}", self.source.annotate(spanned));
     }
 
-    fn error(&mut self, err: LoxError) {
-        let spanned = Spanned { value: err, span: self.span };
-        eprintln!("{}", self.source.annotate(spanned));
-    }
-
     /// Checks whether the next token matches the provided type, without
     /// consuming the token.
     fn check(&mut self, token_type: TokenType) -> bool {

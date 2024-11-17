@@ -11,7 +11,8 @@ use crate::syntax::tokens::TokenType;
 
 use super::{Interpreter, LoxResult, Visitor};
 
-impl<'a> Visitor<Expr> for Interpreter<'a> {
+impl<'a> Visitor<&Expr> for Interpreter<'a> {
+    type Output = LoxResult;
     fn visit(&mut self, expr: &Expr) -> LoxResult {
         match expr {
             Expr::Literal { value } => Ok(value.clone().into()),

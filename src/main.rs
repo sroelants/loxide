@@ -101,11 +101,11 @@ impl Loxide {
         };
 
         // Variable resolution
-        let mut resolver = Resolver::new();
-        resolver.resolve_ast(&ast);
+        let mut resolver = Resolver::new(&source);
+        let _ = resolver.visit(&ast);
 
         // Interpreting
-        let mut interpreter = Interpreter::new(resolver.locals);
+        let mut interpreter = Interpreter::new(&source, resolver.locals);
 
         match interpreter.visit(&ast) {
             Ok(lit) => println!("{lit}"),
