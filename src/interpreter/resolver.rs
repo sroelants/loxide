@@ -1,8 +1,8 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use crate::sourcemap::Source;
 use crate::span::Spanned;
-use crate::errors::LoxError;
 use crate::syntax::ast::{Ast, Expr, Stmt};
 use crate::syntax::tokens::Token;
 
@@ -20,7 +20,7 @@ enum FunctionType {
     Method,
 }
 
-type ResolverResult = Result<(), Spanned<LoxError>>;
+type ResolutionResult = Result<(), Spanned<ResolutionError>>;
 
 impl<'a> Resolver<'a> {
     pub fn new(source: &'a Source<'a>) -> Self {
@@ -31,7 +31,7 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn error(&self, spanned: Spanned<LoxError>) {
+    fn error(&self, spanned: Spanned<ResolutionError>) {
         eprintln!("{}", self.source.annotate(spanned));
     }
 
@@ -55,7 +55,7 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_many(&mut self, statements: &'a [Stmt]) -> ResolverResult {
+    fn resolve_many(&mut self, statements: &'a [Stmt]) -> ResolutionResult {
         for statement in statements {
             self.visit(statement)?;
         }
@@ -69,7 +69,7 @@ impl<'a> Resolver<'a> {
         _name: &Token,
         params: &[Token],
         body: &'a [Stmt]
-    ) -> ResolverResult {
+    ) -> ResolutionResult {
         self.push_scope();
 
         for param in params {
@@ -84,7 +84,7 @@ impl<'a> Resolver<'a> {
         Ok(())
     }
 
-    fn resolve_class(&mut self, name: &Token) -> ResolverResult {
+    fn resolve_class(&mut self, name: &Token) -> ResolutionResult {
         self.declare(name);
         self.define(name);
         Ok(())
@@ -101,9 +101,9 @@ impl<'a> Resolver<'a> {
 }
 
 impl<'a> Visitor<&'a Stmt> for Resolver<'a> {
-    type Output = Result<(), Spanned<LoxError>>;
+    type Output = Result<(), Spanned<ResolutionError>>;
 
-    fn visit(&mut self, stmt: &'a Stmt) -> ResolverResult {
+    fn visit(&mut self, stmt: &'a Stmt) -> ResolutionResult {
         match stmt {
             Stmt::Block { statements } => {
                 self.push_scope();
@@ -177,15 +177,15 @@ impl<'a> Visitor<&'a Stmt> for Resolver<'a> {
 }
 
 impl<'a> Visitor<&'a Expr> for Resolver<'a> {
-    type Output = Result<(), Spanned<LoxError>>;
+    type Output = Result<(), Spanned<ResolutionError>>;
 
-    fn visit(&mut self, expr: &'a Expr) -> ResolverResult {
+    fn visit(&mut self, expr: &'a Expr) -> ResolutionResult {
         match expr {
             Expr::Variable { name } => {
                 if let Some(scope) = self.scopes.last() {
                     if scope.get(&name.lexeme).is_some_and(|v| !v) {
                         self.error(Spanned {
-                            value: LoxError::RecursiveVarDecl,
+                            value: ResolutionError::RecursiveVarDecl,
                             span: name.span,
                         });
                     }
@@ -245,11 +245,24 @@ impl<'a> Visitor<&'a Expr> for Resolver<'a> {
 }
 
 impl<'a> Visitor<&'a Ast> for Resolver<'a> {
-    type Output = ResolverResult;
+    type Output = ResolutionResult;
 
-    fn visit(&mut self, ast: &'a Ast) -> ResolverResult {
+    fn visit(&mut self, ast: &'a Ast) -> ResolutionResult {
         self.resolve_many(ast)?;
 
         Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub enum ResolutionError {
+    RecursiveVarDecl,
+}
+
+impl Display for ResolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResolutionError::RecursiveVarDecl => write!(f, "Can't read local variable in its own initializer"),
+        }
     }
 }

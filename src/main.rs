@@ -11,9 +11,7 @@ use syntax::tokenizer::Scanner;
 use syntax::parser::Parser;
 
 pub mod colors;
-pub mod pretty_print;
 pub mod span;
-pub mod errors;
 pub mod sourcemap;
 pub mod util;
 pub mod interpreter;

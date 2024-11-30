@@ -4,8 +4,8 @@ use std::fmt::Display;
 use std::rc::Rc;
 use super::functions::LoxFunction;
 use super::functions::Call;
+use super::RuntimeError;
 use crate::span::Spanned;
-use crate::errors::LoxError;
 use crate::interpreter::Interpreter;
 use crate::interpreter::value::LoxValue;
 use crate::syntax::tokens::Token;
@@ -27,7 +27,7 @@ impl Call for Rc<Class> {
         &self,
         _interpreter: &mut Interpreter,
         _args: &[LoxValue],
-    ) -> Result<LoxValue, Spanned<LoxError>> {
+    ) -> Result<LoxValue, Spanned<RuntimeError>> {
         let instance = Instance(Rc::new(RefCell::new(InstanceInner {
             class: self.clone(),
             fields: HashMap::new(),
@@ -52,14 +52,14 @@ pub struct Instance(pub Rc<RefCell<InstanceInner>>);
 
 
 impl Instance {
-    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
+    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<RuntimeError>> {
         if let Some(value) = self.0.borrow().fields.get(&name.lexeme) {
             Ok(value.to_owned())
         } else if let Some(method) = self.0.borrow().class.methods.get(&name.lexeme) {
             Ok(LoxValue::Function(Rc::new(Rc::unwrap_or_clone(method.clone()).bind(&self.clone()))))
         } else {
             Err(Spanned {
-                value: LoxError::UndefinedProperty(name.lexeme.clone()),
+                value: RuntimeError::UndefinedProperty(name.lexeme.clone()),
                 span: name.span
             })
         }

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::errors::LoxError;
+use super::RuntimeError;
 use super::functions::globals::Clock;
 use crate::span::Spanned;
 use crate::syntax::tokens::Token;
@@ -39,7 +39,7 @@ impl Env {
         self.bindings.borrow_mut().insert(name, value);
     }
 
-    pub fn assign(&self, name: &Token, value: LoxValue) -> Result<(), Spanned<LoxError>> {
+    pub fn assign(&self, name: &Token, value: LoxValue) -> Result<(), Spanned<RuntimeError>> {
         if RefCell::borrow(&self.bindings).contains_key(&name.lexeme) {
             self.bindings.borrow_mut().insert(name.lexeme.to_owned(), value);
             Ok(())
@@ -47,26 +47,26 @@ impl Env {
             parent.assign(name, value)
         } else {
             Err(Spanned {
-                value: LoxError::UndeclaredVar(format!("{name}")),
+                value: RuntimeError::UndeclaredVar(format!("{name}")),
                 span: name.span
             })
         }
     }
 
-    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
+    pub fn get(&self, name: &Token) -> Result<LoxValue, Spanned<RuntimeError>> {
         if let Some(value) = RefCell::borrow(&self.bindings).get(&name.lexeme) {
             Ok(value.to_owned())
         } else if let Some(parent) = &self.parent {
             parent.get(name)
         } else {
             Err(Spanned {
-                value: LoxError::UndeclaredVar(format!("{name}")),
+                value: RuntimeError::UndeclaredVar(format!("{name}")),
                 span: name.span
             })
         }
     }
 
-    pub fn get_at(&self, dist: usize, name: &Token) -> Result<LoxValue, Spanned<LoxError>> {
+    pub fn get_at(&self, dist: usize, name: &Token) -> Result<LoxValue, Spanned<RuntimeError>> {
         let mut env = self;
 
         for _ in 0..dist {
@@ -81,7 +81,7 @@ impl Env {
         dist: usize,
         name: &Token,
         value: LoxValue
-    ) -> Result<(), Spanned<LoxError>> {
+    ) -> Result<(), Spanned<RuntimeError>> {
         let mut env = self;
 
         for _ in 0..dist {

@@ -4,12 +4,11 @@ use crate::syntax::ast::Stmt;
 use crate::span::Spanned;
 use crate::span::Span;
 use super::functions::LoxFunction;
-use crate::errors::LoxError;
 use super::environment::Env;
 use super::class::Class;
 use super::value::LoxValue;
 
-use super::{Interpreter, LoxResult, Visitor};
+use super::{Interpreter, LoxResult, Visitor, RuntimeError};
 
 impl<'a> Visitor<&Stmt> for Interpreter<'a> {
     type Output = LoxResult;
@@ -29,7 +28,7 @@ impl<'a> Visitor<&Stmt> for Interpreter<'a> {
                 };
 
                 Err(Spanned {
-                    value: LoxError::Return(value),
+                    value: RuntimeError::Return(value),
                     span: Span::new(),
                 })?;
             }

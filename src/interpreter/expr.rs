@@ -2,7 +2,7 @@
 use std::rc::Rc;
 
 use crate::interpreter::LoxValue as Val;
-use crate::errors::LoxError;
+use super::RuntimeError;
 use super::functions::Call;
 use crate::span::Spanned;
 use crate::syntax::ast::Expr;
@@ -48,7 +48,7 @@ impl<'a> Visitor<&Expr> for Interpreter<'a> {
                     instance.get(name)
                 } else {
                     Err(Spanned {
-                        value: LoxError::IllegalPropertyAccess,
+                        value: RuntimeError::IllegalPropertyAccess,
                         span: name.span
                     })
 
@@ -64,7 +64,7 @@ impl<'a> Visitor<&Expr> for Interpreter<'a> {
                     Ok(value)
                 } else {
                     Err(Spanned {
-                        value: LoxError::IllegalFieldAccess,
+                        value: RuntimeError::IllegalFieldAccess,
                         span: name.span,
                     })
                 }
@@ -102,7 +102,7 @@ impl<'a> Interpreter<'a> {
             Val::NativeFunction(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
-                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        value: RuntimeError::ArityMismatch(fun.arity(), args.len()),
                         span: token.span,
                     });
                 }
@@ -112,7 +112,7 @@ impl<'a> Interpreter<'a> {
             Val::Function(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
-                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        value: RuntimeError::ArityMismatch(fun.arity(), args.len()),
                         span: token.span,
                     });
                 }
@@ -122,7 +122,7 @@ impl<'a> Interpreter<'a> {
             Val::Class(fun) => {
                 if args.len() != fun.arity() {
                     return Err(Spanned {
-                        value: LoxError::ArityMismatch(fun.arity(), args.len()),
+                        value: RuntimeError::ArityMismatch(fun.arity(), args.len()),
                         span: token.span,
                     });
                 }
@@ -131,7 +131,7 @@ impl<'a> Interpreter<'a> {
             },
             _ => {
                 Err(Spanned {
-                    value: LoxError::NotCallable,
+                    value: RuntimeError::NotCallable,
                     span: token.span,
                 })
             }
@@ -188,7 +188,7 @@ impl<'a> Interpreter<'a> {
                     Ok(Val::Str(Rc::new(format!("{left}{right}"))))
                 } else {
                     Err(Spanned {
-                        value: LoxError::MultiTypeError("string or number"),
+                        value: RuntimeError::MultiTypeError("string or number"),
                         span: op.span,
                     })
                 }

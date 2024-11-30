@@ -1,4 +1,5 @@
-use std::ops::Range;
+use std::{fmt::Display, ops::Range};
+use crate::colors::{RED, NORMAL};
 
 pub struct Spanned<T> {
     pub value: T,
@@ -55,5 +56,15 @@ impl Span {
 
     pub fn end(&self) -> usize {
         self.offset + self.len
+    }
+}
+
+impl<'a, T> Display for Annotated<'a, T> where T: Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let marker_offset = self.col;
+        let marker_len = self.span.len;
+        writeln!(f, "{RED}Error{NORMAL} (on {}:{}): {}", self.line, self.col, self.value)?;
+        writeln!(f, "    {}", self.source)?;
+        writeln!(f, "    {RED}{: <marker_offset$}{:^>marker_len$}{NORMAL}","", "")
     }
 }

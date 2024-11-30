@@ -3,9 +3,9 @@
 //! We should be able to use a lot of the same logic, i.e., peeking and advancing
 //! the iterator.
 
+use std::fmt::Display;
 use std::iter::Peekable;
 use std::rc::Rc;
-use crate::errors::LoxError;
 use crate::sourcemap::Source;
 use crate::span::Span;
 use crate::span::Spanned;
@@ -17,7 +17,7 @@ use super::tokens::Token;
 use super::tokens::TokenType;
 use super::ast::Expr;
 
-type ParseResult<T> = Result<T, Spanned<LoxError>>;
+type ParseResult<T> = Result<T, Spanned<ParseError>>;
 
 pub struct Parser<'a> {
     source: &'a Source<'a>,
@@ -45,7 +45,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn spanned_error(&mut self, spanned: Spanned<LoxError>) {
+    fn spanned_error(&mut self, spanned: Spanned<ParseError>) {
         eprintln!("{}", self.source.annotate(spanned));
     }
 
@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
         None
     }
 
-    pub fn expect(&mut self, expected: TokenType, err: LoxError) -> ParseResult<Token> {
+    pub fn expect(&mut self, expected: TokenType, err: ParseError) -> ParseResult<Token> {
         let Some(next) = self.tokens.peek() else {
             return Err(Spanned { value: err, span: self.span })
         };
@@ -127,7 +127,7 @@ impl<'a> Parser<'a> {
 
     pub fn var_declaration(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        let name = self.expect(Identifier, LoxError::ExpectedVarName)?;
+        let name = self.expect(Identifier, ParseError::ExpectedVarName)?;
 
         let initializer = if let Some(_) = self.matches(Equal) {
             Some(self.expression()?)
@@ -135,7 +135,7 @@ impl<'a> Parser<'a> {
             None
         };
 
-        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
+        self.expect(Semicolon, ParseError::ExpectedSemicolon)?;
 
         Ok(Stmt::Var { name, initializer })
     }
@@ -166,8 +166,8 @@ impl<'a> Parser<'a> {
 
     pub fn class(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        let name = self.expect(Identifier, LoxError::ExpectedClassName)?;
-        self.expect(LeftBrace, LoxError::ExpectedLeftBrace("before class body"))?;
+        let name = self.expect(Identifier, ParseError::ExpectedClassName)?;
+        self.expect(LeftBrace, ParseError::ExpectedLeftBrace("before class body"))?;
 
         let mut methods = Vec::new();
 
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
             methods.push(self.function("method")?);
         }
 
-        self.expect(RightBrace, LoxError::ExpectedRightBrace("after class body"))?;
+        self.expect(RightBrace, ParseError::ExpectedRightBrace("after class body"))?;
 
         Ok(Stmt::Class { name, methods })
     }
@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
             Some(self.expression()?)
         };
 
-        self.expect(TokenType::Semicolon, LoxError::ExpectedSemicolon)?;
+        self.expect(TokenType::Semicolon, ParseError::ExpectedSemicolon)?;
         Ok(Stmt::Return { keyword, expr })
     }
 
@@ -195,19 +195,19 @@ impl<'a> Parser<'a> {
         use TokenType::*;
 
         // Parse identifier
-        let name = self.expect(Identifier, LoxError::ExpectedFunName)?;
-        self.expect(LeftParen, LoxError::ExpectedLeftParen("after function name"))?;
+        let name = self.expect(Identifier, ParseError::ExpectedFunName)?;
+        self.expect(LeftParen, ParseError::ExpectedLeftParen("after function name"))?;
 
         // Parse params
         let mut params = Vec::new();
 
         if !self.check(RightParen) {
-            params.push(self.expect(Identifier, LoxError::ExpectedParamName(""))?);
+            params.push(self.expect(Identifier, ParseError::ExpectedParamName(""))?);
 
             while let Some(_) = self.matches(Comma) {
                 if params.len() >= 255 {
                     let spanned = Spanned {
-                        value: LoxError::TooManyParams,
+                        value: ParseError::TooManyParams,
                         span: self.tokens.peek().unwrap().span,
                     };
 
@@ -215,15 +215,15 @@ impl<'a> Parser<'a> {
                 }
 
                 params.push(
-                    self.expect(Identifier, LoxError::ExpectedParamName(""))?
+                    self.expect(Identifier, ParseError::ExpectedParamName(""))?
                 );
             }
         }
 
-        self.expect(RightParen, LoxError::ExpectedRightParen("after parameters"))?;
+        self.expect(RightParen, ParseError::ExpectedRightParen("after parameters"))?;
 
         // Parse body
-        self.expect(LeftBrace, LoxError::ExpectedLeftBrace("before function body"))?;
+        self.expect(LeftBrace, ParseError::ExpectedLeftBrace("before function body"))?;
         let body = self.block()?;
 
         Ok(Stmt::Fun { name, params, body })
@@ -232,9 +232,9 @@ impl<'a> Parser<'a> {
     pub fn if_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'if'"))?;
+        self.expect(LeftParen, ParseError::ExpectedLeftParen("after 'if'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, LoxError::ExpectedRightParen("after if condition"))?;
+        self.expect(RightParen, ParseError::ExpectedRightParen("after if condition"))?;
 
         let then_branch = Box::new(self.statement()?);
 
@@ -249,9 +249,9 @@ impl<'a> Parser<'a> {
 
     pub fn while_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
-        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'while'"))?;
+        self.expect(LeftParen, ParseError::ExpectedLeftParen("after 'while'"))?;
         let condition = self.expression()?;
-        self.expect(RightParen, LoxError::ExpectedRightParen("after while condition"))?;
+        self.expect(RightParen, ParseError::ExpectedRightParen("after while condition"))?;
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While { condition, body })
@@ -260,7 +260,7 @@ impl<'a> Parser<'a> {
     pub fn for_statement(&mut self) -> ParseResult<Stmt> {
         use TokenType::*;
 
-        self.expect(LeftParen, LoxError::ExpectedLeftParen("after 'for'"))?;
+        self.expect(LeftParen, ParseError::ExpectedLeftParen("after 'for'"))?;
 
         let initializer = if let Some(_) = self.matches(Semicolon) {
             None
@@ -276,7 +276,7 @@ impl<'a> Parser<'a> {
             None
         };
 
-        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
+        self.expect(Semicolon, ParseError::ExpectedSemicolon)?;
 
         let increment = if !self.check(RightParen) {
             Some(self.expression()?)
@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
            None
         };
 
-        self.expect(RightParen, LoxError::ExpectedRightParen("after for clause"))?;
+        self.expect(RightParen, ParseError::ExpectedRightParen("after for clause"))?;
 
         let mut body = self.statement()?;
 
@@ -311,7 +311,7 @@ impl<'a> Parser<'a> {
         use TokenType::*;
         let expr = self.expression()?;
 
-        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
+        self.expect(Semicolon, ParseError::ExpectedSemicolon)?;
 
         Ok(Stmt::Print { expr })
     }
@@ -324,7 +324,7 @@ impl<'a> Parser<'a> {
             statements.push(self.declaration()?)
         }
 
-        self.expect(RightBrace, LoxError::ExpectedRightBrace("after block"))?;
+        self.expect(RightBrace, ParseError::ExpectedRightBrace("after block"))?;
         Ok(statements)
     }
 
@@ -333,7 +333,7 @@ impl<'a> Parser<'a> {
         use TokenType::*;
         let expr = self.expression()?;
 
-        self.expect(Semicolon, LoxError::ExpectedSemicolon)?;
+        self.expect(Semicolon, ParseError::ExpectedSemicolon)?;
 
         Ok(Stmt::Expression { expr })
     }
@@ -356,7 +356,7 @@ impl<'a> Parser<'a> {
             }
 
             return Err(Spanned {
-                value: LoxError::InvalidAssigTarget,
+                value: ParseError::InvalidAssigTarget,
                 span: self.span,
             });
         }
@@ -461,7 +461,7 @@ impl<'a> Parser<'a> {
             if let Some(_) = self.matches(LeftParen) {
                 expr = self.finish_call(expr)?;
             } if let Some(_) = self.matches(Dot) {
-                let name = self.expect(Identifier, LoxError::ExpectedPropertyName("after ."))?;
+                let name = self.expect(Identifier, ParseError::ExpectedPropertyName("after ."))?;
                 expr = Expr::Get { name, object: Box::new(expr) }
             } else {
                 break;
@@ -483,7 +483,7 @@ impl<'a> Parser<'a> {
             while let Some(_) = self.matches(Comma) {
                 if arguments.len() >= 255 {
                     let spanned = Spanned {
-                        value: LoxError::TooManyArgs,
+                        value: ParseError::TooManyArgs,
                         span: self.tokens.peek().unwrap().span,
                     };
 
@@ -494,7 +494,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let paren = self.expect(RightParen, LoxError::ExpectedRightBrace("after arguments"))?;
+        let paren = self.expect(RightParen, ParseError::ExpectedRightBrace("after arguments"))?;
 
         Ok(Expr::Call { callee: Box::new(callee), paren, arguments })
     }
@@ -539,13 +539,13 @@ impl<'a> Parser<'a> {
 
         if let Some(_) = self.matches(LeftParen) {
             let expr = self.expression()?;
-            self.expect(RightParen, LoxError::ExpectedRightParen(""))?;
+            self.expect(RightParen, ParseError::ExpectedRightParen(""))?;
 
             return Ok(Expr::Grouping { expr: Box::new(expr) });
         }
 
         Err(Spanned {
-            value: LoxError::ExpectedExpression,
+            value: ParseError::ExpectedExpression,
             span: self.span
         })
     }
@@ -569,6 +569,47 @@ impl<'a> Parser<'a> {
             Ok(statements)
         } else {
             Err(())
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum ParseError {
+    TooManyParams,
+    TooManyArgs,
+    ExpectedIdent,
+    ExpectedSemicolon,
+    ExpectedFunName,
+    ExpectedLeftBrace(&'static str),
+    ExpectedRightBrace(&'static str),
+    ExpectedLeftParen(&'static str),
+    ExpectedRightParen(&'static str),
+    ExpectedParamName(&'static str),
+    InvalidAssigTarget,
+    ExpectedVarName,
+    ExpectedExpression,
+    ExpectedClassName,
+    ExpectedPropertyName(&'static str),
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::TooManyParams => write!(f, "Maximum number of parameters allowed is 255"),
+            ParseError::TooManyArgs => write!(f, "Maximum number of arguments allowed is 255"),
+            ParseError::ExpectedIdent => write!(f, "Expected identifier"),
+            ParseError::ExpectedSemicolon => write!(f, "Expected ';' after statement"),
+            ParseError::ExpectedFunName => write!(f, "Expected function name"),
+            ParseError::ExpectedLeftBrace(ctx) => write!(f, "Expected '{{' {ctx}"),
+            ParseError::ExpectedRightBrace(ctx) => write!(f, "Expected '}}' {ctx}"),
+            ParseError::ExpectedLeftParen(ctx) => write!(f, "Expected '(' {ctx}"),
+            ParseError::ExpectedRightParen(ctx) => write!(f, "Expected ')' {ctx}"),
+            ParseError::ExpectedParamName(ctx) => write!(f, "Expected parameter name {ctx}"),
+            ParseError::InvalidAssigTarget => write!(f, "Invalid assignment target"),
+            ParseError::ExpectedVarName => write!(f, "Expected variable name"),
+            ParseError::ExpectedExpression => write!(f, "Expected expression"),
+            ParseError::ExpectedClassName => write!(f, "Expected class name"),
+            ParseError::ExpectedPropertyName(ctx) => write!(f, "Expected property name {ctx}"),
         }
     }
 }

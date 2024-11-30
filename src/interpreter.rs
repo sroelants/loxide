@@ -2,12 +2,12 @@
 use value::LoxValue;
 use environment::Env;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::rc::Rc;
 
 use crate::sourcemap::Source;
 use crate::syntax::ast::Ast;
 use crate::syntax::ast::Expr;
-use crate::errors::LoxError;
 use crate::span::Spanned;
 
 mod expr;
@@ -18,8 +18,8 @@ mod class;
 pub mod resolver;
 pub mod value;
 
-type Result<T> = std::result::Result<T, Spanned<LoxError>>;
-type LoxResult = std::result::Result<LoxValue, Spanned<LoxError>>;
+type Result<T> = std::result::Result<T, Spanned<RuntimeError>>;
+type LoxResult = std::result::Result<LoxValue, Spanned<RuntimeError>>;
 
 pub trait Visitor<T> {
     type Output;
@@ -58,7 +58,7 @@ impl<'a> Interpreter<'a> {
         self.locals.insert(expr, depth);
     }
 
-    pub fn error(&mut self, spanned: Spanned<LoxError>) {
+    pub fn error(&mut self, spanned: Spanned<RuntimeError>) {
         eprintln!("{}", self.source.annotate(spanned));
     }
 }
@@ -72,5 +72,39 @@ impl<'a> Visitor<&Ast> for Interpreter<'a> {
         }
 
         Ok(LoxValue::Nil)
+    }
+}
+
+#[derive(Clone)]
+pub enum RuntimeError {
+    ArityMismatch(usize, usize),
+    NotCallable,
+    TypeError(&'static str),
+    MultiTypeError(&'static str),
+    UndeclaredVar(String),
+    IllegalPropertyAccess,
+    IllegalFieldAccess,
+    UndefinedProperty(String),
+
+    // Not actual errors
+    Return(LoxValue),
+}
+
+impl Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeError::ArityMismatch(expected, found) => write!(f, "Expected {expected} arguments, but found {found}"),
+            RuntimeError::NotCallable => write!(f, "Expression is not callable"),
+            RuntimeError::TypeError(ctx) => write!(f, "Operand must be {ctx}"),
+            RuntimeError::MultiTypeError(ctx) => write!(f, "Operands must both be {ctx}"),
+            RuntimeError::UndeclaredVar(name) => write!(f, "Undeclared variable '{name}'"),
+            RuntimeError::IllegalPropertyAccess => write!(f, "Only class instances have properties"),
+            RuntimeError::IllegalFieldAccess => write!(f, "Only class instances have fields"),
+            RuntimeError::UndefinedProperty(name) => write!(f, "Undefined property '{name}'"),
+
+            // Not an actual error, should never make it to the error reporting
+            // stage
+            RuntimeError::Return(_) => unreachable!()
+        }
     }
 }

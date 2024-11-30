@@ -1,7 +1,7 @@
 use std::{fmt::Display, rc::Rc};
 use std::hash::Hash;
 
-use crate::errors::LoxError;
+use super::RuntimeError;
 use crate::span::Spanned;
 use crate::syntax::ast::Literal;
 use crate::syntax::tokens::Token;
@@ -104,27 +104,27 @@ impl LoxValue {
         }
     }
 
-    pub fn assert_str(self: LoxValue, op: &Token) -> Result<Rc<String>, Spanned<LoxError>> {
+    pub fn assert_str(self: LoxValue, op: &Token) -> Result<Rc<String>, Spanned<RuntimeError>> {
         if let LoxValue::Str(str) = self {
         Ok(str)
         } else {
-            Err(Spanned { value: LoxError::TypeError("string"), span: op.span })
+            Err(Spanned { value: RuntimeError::TypeError("string"), span: op.span })
         }
     }
 
-    pub fn assert_num(self: LoxValue, op: &Token) -> Result<f64, Spanned<LoxError>> {
+    pub fn assert_num(self: LoxValue, op: &Token) -> Result<f64, Spanned<RuntimeError>> {
         if let LoxValue::Num(num) = self {
         Ok(num)
         } else {
-            Err(Spanned { value: LoxError::TypeError("number"), span: op.span })
+            Err(Spanned { value: RuntimeError::TypeError("number"), span: op.span })
         }
     }
 
-    pub fn assert_bool(self: LoxValue, op: &Token) -> Result<bool, Spanned<LoxError>> {
+    pub fn assert_bool(self: LoxValue, op: &Token) -> Result<bool, Spanned<RuntimeError>> {
         if let LoxValue::Bool(boolean) = self {
         Ok(boolean)
         } else {
-            Err(Spanned { value: LoxError::TypeError("bool"), span: op.span })
+            Err(Spanned { value: RuntimeError::TypeError("bool"), span: op.span })
         }
     }
 }

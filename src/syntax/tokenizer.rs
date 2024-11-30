@@ -1,7 +1,7 @@
+use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::errors::LoxError;
 use crate::sourcemap::Source;
 use crate::span::Span;
 use crate::span::Spanned;
@@ -28,7 +28,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// Push a new LexError to the internal list of encountered errors
-    fn error(&mut self, err: LoxError) {
+    fn error(&mut self, err: LexError) {
         let spanned = Spanned { value: err, span: self.span };
         eprintln!("{}", self.source.annotate(spanned));
         self.had_error = true;
@@ -91,7 +91,7 @@ impl<'a> Scanner<'a> {
         if self.consume_char() == Some('"') {
             true
         } else {
-            self.error(LoxError::UnterminatedString);
+            self.error(LexError::UnterminatedString);
             false
         }
     }
@@ -191,7 +191,7 @@ impl<'a> Iterator for Scanner<'a> {
                 }
 
                 _ => {
-                    self.error(LoxError::UnexpectedToken);
+                    self.error(LexError::UnexpectedToken);
                     continue;
                 }
             };
@@ -228,6 +228,21 @@ fn ident_type(s: &str) -> TokenType {
         "var" => Var,
         "while" => While,
         _ => Identifier,
+    }
+}
+
+#[derive(Clone)]
+pub enum LexError {
+    UnexpectedToken,
+    UnterminatedString,
+}
+
+impl Display for LexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LexError::UnexpectedToken => write!(f, "Unexpected input"),
+            LexError::UnterminatedString => write!(f, "Unterminated string"),
+        }
     }
 }
 

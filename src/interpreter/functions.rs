@@ -3,11 +3,11 @@ use std::fmt::Debug;
 
 use super::environment::Env;
 use super::class::Instance;
+use super::RuntimeError;
 use crate::interpreter::value::LoxValue;
 use crate::syntax::tokens::Token;
 use crate::span::Spanned;
 use crate::interpreter::Interpreter;
-use crate::errors::LoxError;
 use crate::syntax::ast::Stmt;
 
 pub trait Call: Display + Debug {
@@ -15,7 +15,7 @@ pub trait Call: Display + Debug {
         &self,
         interpreter: &mut Interpreter,
         args: &[LoxValue],
-    ) -> Result<LoxValue, Spanned<LoxError>>;
+    ) -> Result<LoxValue, Spanned<RuntimeError>>;
 
     fn arity(&self) -> usize;
 }
@@ -33,7 +33,7 @@ impl Call for LoxFunction {
         &self,
         interpreter: &mut Interpreter,
         args: &[LoxValue],
-    ) -> Result<LoxValue, Spanned<LoxError>> {
+    ) -> Result<LoxValue, Spanned<RuntimeError>> {
         let local_scope = Rc::new(Env::new(self.env.clone()));
 
         for (param, arg) in self.params.iter().zip(args) {
@@ -43,7 +43,7 @@ impl Call for LoxFunction {
         // Catch any return statements that are bubbled up by throwing an error
         match interpreter.exec_block_with_env(&self.body, local_scope) {
             Err(Spanned {
-                value: LoxError::Return(value),
+                value: RuntimeError::Return(value),
                 ..
             }) => Ok(value),
 
@@ -83,7 +83,8 @@ pub mod globals {
     use std::fmt::Debug;
 
     use crate::interpreter::value::LoxValue;
-    use crate::{errors::LoxError, interpreter::Interpreter, span::Spanned};
+    use crate::{interpreter::Interpreter, span::Spanned};
+    use super::RuntimeError;
 
     use super::Call;
 
@@ -98,7 +99,7 @@ pub mod globals {
             &self,
             _interpreter: &mut Interpreter,
             _args: &[LoxValue],
-        ) -> Result<LoxValue, Spanned<LoxError>> {
+        ) -> Result<LoxValue, Spanned<RuntimeError>> {
             use std::time::{SystemTime, UNIX_EPOCH};
 
             let epoch_millis = SystemTime::now()
